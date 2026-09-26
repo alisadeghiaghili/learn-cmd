@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>learn-cmd — Interactive Windows CMD Tutorial</title>
+    <meta
+      name="description"
+      content="Learn the Windows command line with a live filesystem visualizer, sandbox, and leveled challenges. Inspired by learnGitBranching."
+    />
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-name">learn-<span>cmd</span></div>
+        <div class="brand-sub">win10</div>
+      </div>
+      <span id="mode-label" class="mode-chip">SANDBOX</span>
+      <div id="level-title">Free exploration</div>
+      <div class="golf-box" title="Command golf — commands used this run / par">
+        golf <strong id="golf-score">0</strong>
+        <span>/ par <span id="golf-par">—</span></span>
+      </div>
+      <div class="actions">
+        <button id="btn-levels" class="btn" type="button">Levels</button>
+        <button id="btn-sandbox" class="btn" type="button">Sandbox</button>
+        <button id="btn-hint" class="btn" type="button">Hint</button>
+        <button id="btn-undo" class="btn" type="button" disabled>Undo</button>
+        <button id="btn-reset" class="btn" type="button">Reset</button>
+        <button id="btn-share" class="btn" type="button">Share</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="panel" aria-label="Filesystem tree">
+        <div class="panel-head">
+          <span>File system</span>
+          <span>live</span>
+        </div>
+        <div id="fs-tree" class="panel-body"></div>
+        <div id="goal-panel" class="goal-panel"></div>
+      </section>
+
+      <section class="panel term" aria-label="Terminal">
+        <div class="panel-head">
+          <span>cmd.exe</span>
+          <span>virtual</span>
+        </div>
+        <div id="term-body" class="term-body" aria-live="polite"></div>
+        <div class="term-input-row">
+          <span id="term-prompt">C:\Users\student&gt;</span>
+          <input
+            id="term-input"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            aria-label="Command input"
+          />
+        </div>
+      </section>
+    </main>
+
+    <div id="modal" class="modal" role="dialog" aria-modal="true">
+      <div id="modal-body"></div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

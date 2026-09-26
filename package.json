@@ -1,0 +1,15 @@
+{
+  "name": "learn-cmd",
+  "version": "1.0.0",
+  "description": "Interactive Windows CMD tutorial and sandbox with a live filesystem visualizer",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/cmd.test.js",
+    "start": "node scripts/serve.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
