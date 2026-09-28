@@ -19,7 +19,11 @@ import {
   nextLevel,
   prevLevel,
   baseTree,
+  registerCustomLevel,
+  listCustomLevels,
+  levelFromJson,
 } from './levels.js';
+import { getDialogFa } from './i18n.js';
 
 /** @typedef {import('./levels.js').Level} Level */
 
@@ -244,6 +248,7 @@ const el = {
   btnReset: /** @type {HTMLButtonElement} */ (document.getElementById('btn-reset')),
   btnHint: /** @type {HTMLButtonElement} */ (document.getElementById('btn-hint')),
   btnShare: /** @type {HTMLButtonElement} */ (document.getElementById('btn-share')),
+  langToggle: /** @type {HTMLButtonElement} */ (document.getElementById('lang-toggle')),
 };
 
 // ---------------------------------------------------------------------------
@@ -277,7 +282,33 @@ function refreshHud() {
  */
 function pick(map) {
   if (!map) return '';
-  return map.en_US || Object.values(map)[0] || '';
+  const lang = currentLang();
+  return map[lang] || map.en_US || Object.values(map)[0] || '';
+}
+
+/** @type {'en_US' | 'fa'} */
+let appLang = 'fa';
+
+/**
+ * @returns {'en_US' | 'fa'}
+ */
+function currentLang() {
+  return appLang;
+}
+
+/**
+ * @param {'en_US' | 'fa'} lang
+ */
+function setLang(lang) {
+  appLang = lang;
+  try {
+    localStorage.setItem('learn-cmd.lang', lang);
+  } catch {
+    /* ignore */
+  }
+  const chip = document.getElementById('lang-toggle');
+  if (chip) chip.textContent = lang === 'fa' ? 'FA' : 'EN';
+  refreshHud();
 }
 
 function updateGoalPanel() {
@@ -504,9 +535,14 @@ function handleMeta(meta, line) {
       sharePermalink();
       break;
     case 'build':
-    case 'import':
-      print('Level builder: craft a goal tree in the sandbox, then export with `share`.', 'sys');
+      openLevelBuilder();
       break;
+    case 'import': {
+      const rest = meta.args.slice();
+      if (rest[0] && rest[0].toLowerCase() === 'level') rest.shift();
+      openLevelImporter(rest.join(' '));
+      break;
+    }
     default:
       print(`Unknown meta command: ${line}`, 'err');
   }
@@ -582,6 +618,146 @@ function sharePermalink() {
     toast('Permalink copied');
   } catch {
     /* ignore */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Level builder / import
+// ---------------------------------------------------------------------------
+
+/** @type {{ startFS: Record<string, unknown> | null, goalFS: Record<string, unknown> | null, startCwd: string, goalCwd: string }} */
+const builderState = {
+  startFS: null,
+  goalFS: null,
+  startCwd: 'C:\\Users\\student',
+  goalCwd: 'C:\\Users\\student',
+};
+
+function openLevelBuilder() {
+  openModal(`
+    <div class="levels-dialog builder">
+      <h2>Build level</h2>
+      <p class="levels-sub">
+        Arrange the sandbox filesystem for the <strong>start</strong> state, capture it,
+        rearrange it to the <strong>goal</strong>, capture that too, then export JSON.
+        <code>import level</code> plays it back.
+      </p>
+
+      <label class="field-label">Name (en_US)</label>
+      <input id="bl-name" class="text-input" type="text" placeholder="My challenge" value="" />
+
+      <label class="field-label">Hint (en_US)</label>
+      <input id="bl-hint" class="text-input" type="text" placeholder="Try md + echo redirection" />
+
+      <label class="field-label">About</label>
+      <input id="bl-about" class="text-input" type="text" placeholder="What this level teaches" />
+
+      <label class="field-label">Solution command</label>
+      <input id="bl-solution" class="text-input" type="text" placeholder="md app &amp;&amp; echo hi&gt;app\\a.txt" />
+
+      <label class="field-label">Par (command golf)</label>
+      <input id="bl-par" class="text-input" type="number" min="1" value="2" />
+
+      <label class="field-label">Intro markdown</label>
+      <textarea id="bl-intro" class="text-area" rows="4" placeholder="## Task&#10;Create app\\a.txt containing hi"></textarea>
+
+      <div class="builder-captures">
+        <div class="capture-card">
+          <div class="capture-title">Start tree</div>
+          <div id="bl-start-status" class="capture-status">not captured</div>
+          <button class="btn" type="button" data-action="bl-capture-start">Capture current FS</button>
+        </div>
+        <div class="capture-card">
+          <div class="capture-title">Goal tree</div>
+          <div id="bl-goal-status" class="capture-status">not captured</div>
+          <button class="btn" type="button" data-action="bl-capture-goal">Capture current FS</button>
+        </div>
+      </div>
+      <p class="builder-cwd">Builder cwd recorded as <code id="bl-cwd">${escapeHtml(fs.cwd)}</code></p>
+
+      <label class="field-label">Export JSON</label>
+      <textarea id="bl-json" class="text-area" rows="8" readonly placeholder="Capture start + goal, then click Export"></textarea>
+
+      <div class="modal-actions">
+        <button class="btn primary" type="button" data-action="bl-export">Export JSON</button>
+        <button class="btn" type="button" data-action="bl-save">Save &amp; play</button>
+        <button class="btn" type="button" data-action="bl-copy">Copy JSON</button>
+        <button class="btn ghost" type="button" data-action="close-modal">Close</button>
+      </div>
+    </div>
+  `);
+}
+
+/**
+ * Collect builder form values into a level JSON object.
+ *
+ * @returns {Record<string, unknown>}
+ */
+function collectBuilderLevel() {
+  const name = /** @type {HTMLInputElement} */ (document.getElementById('bl-name')).value.trim();
+  const hint = /** @type {HTMLInputElement} */ (document.getElementById('bl-hint')).value.trim();
+  const about = /** @type {HTMLInputElement} */ (document.getElementById('bl-about')).value.trim();
+  const solution = /** @type {HTMLInputElement} */ (
+    document.getElementById('bl-solution')
+  ).value.trim();
+  const par = Number(/** @type {HTMLInputElement} */ (document.getElementById('bl-par')).value) || 1;
+  const intro = /** @type {HTMLTextAreaElement} */ (document.getElementById('bl-intro')).value;
+
+  if (!name) throw new Error('Name is required.');
+  if (!builderState.startFS) throw new Error('Capture the start tree first.');
+  if (!builderState.goalFS) throw new Error('Capture the goal tree first.');
+
+  return {
+    id: 'custom-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    name: { en_US: name },
+    hint: { en_US: hint || 'Inspect the goal and use CMD commands.' },
+    about: { en_US: about || 'Custom level' },
+    intro: intro || 'Reach the goal tree.',
+    startFS: builderState.startFS,
+    goalFS: builderState.goalFS,
+    startCwd: builderState.startCwd,
+    goalCwd: builderState.goalCwd,
+    solutionCommand: solution,
+    par,
+  };
+}
+
+function openLevelImporter(prefill) {
+  openModal(`
+    <div class="levels-dialog">
+      <h2>Import level</h2>
+      <p class="levels-sub">Paste a level JSON blob exported by <code>build level</code>.</p>
+      <label class="field-label">Level JSON</label>
+      <textarea id="li-json" class="text-area" rows="12" placeholder='{"id":"...","name":{"en_US":"..."},"startFS":{},"goalFS":{}}'></textarea>
+      <div id="li-error" class="goal-miss" hidden></div>
+      <div class="modal-actions">
+        <button class="btn primary" type="button" data-action="li-load">Load level</button>
+        <button class="btn ghost" type="button" data-action="close-modal">Close</button>
+      </div>
+    </div>
+  `);
+  if (prefill) {
+    /** @type {HTMLTextAreaElement} */ (document.getElementById('li-json')).value = prefill;
+  }
+}
+
+/**
+ * @param {string} jsonText
+ */
+function loadImportedLevel(jsonText) {
+  const errBox = document.getElementById('li-error');
+  try {
+    const raw = JSON.parse(jsonText);
+    const level = levelFromJson(raw);
+    registerCustomLevel(level);
+    closeModal();
+    startLevel(level.id);
+    print(`Imported custom level: ${pick(level.name)}`, 'sys');
+  } catch (err) {
+    if (errBox) {
+      errBox.hidden = false;
+      errBox.textContent = err && err.message ? err.message : String(err);
+    }
   }
 }
 
@@ -699,34 +875,57 @@ function closeModal() {
 }
 
 function openLevelsDialog() {
-  const tabs = Object.entries(sequences);
+  /** @type {{ key: string, title: string, about: string, levels: Level[] }[]} */
+  const groups = Object.entries(sequences).map(([key, seq]) => ({
+    key,
+    title: pick(seq.displayName),
+    about: pick(seq.about),
+    levels: seq.levels,
+  }));
+  const customs = listCustomLevels();
+  if (customs.length) {
+    groups.push({
+      key: 'custom',
+      title: 'Custom',
+      about: 'Levels you built or imported in this session.',
+      levels: customs,
+    });
+  }
+
   let html = `<div class="levels-dialog">
     <h2>Levels</h2>
     <p class="levels-sub">Command golf: try to match par. Progress is saved in your browser.</p>
     <div class="levels-tabs">`;
-  tabs.forEach(([key, seq], i) => {
-    html += `<button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${key}">${escapeHtml(
-      pick(seq.displayName)
+  groups.forEach((g, i) => {
+    html += `<button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${escapeHtml(g.key)}">${escapeHtml(
+      g.title
     )}</button>`;
   });
   html += `</div>`;
-  tabs.forEach(([key, seq], i) => {
-    html += `<div class="tab-panel ${i === 0 ? 'active' : ''}" data-panel="${key}">
-      <p class="seq-about">${escapeHtml(pick(seq.about))}</p>
+
+  groups.forEach((g, i) => {
+    html += `<div class="tab-panel ${i === 0 ? 'active' : ''}" data-panel="${escapeHtml(g.key)}">
+      <p class="seq-about">${escapeHtml(g.about)}</p>
       <ul class="level-list">`;
-    for (const level of seq.levels) {
+    for (const level of g.levels) {
       const prog = progress[level.id];
       const status = prog && prog.solved ? 'solved' : 'open';
-      const best = prog && prog.best != null ? `${prog.best}` : '—';
+      const best = prog && prog.best != null ? String(prog.best) : '—';
       const par = level.par != null ? String(level.par) : '—';
-      html += `<li class="level-item ${status}" data-level="${level.id}">
+      const label = g.key === 'custom' ? 'custom' : `best ${best} / par ${par}`;
+      html += `<li class="level-item ${status}" data-level="${escapeHtml(level.id)}">
         <span class="level-name">${escapeHtml(pick(level.name))}</span>
-        <span class="level-golf">best ${best} / par ${par}</span>
+        <span class="level-golf">${label}</span>
       </li>`;
     }
     html += `</ul></div>`;
   });
-  html += `<div class="modal-actions"><button class="btn ghost" data-action="close-modal">Close</button></div></div>`;
+
+  html += `<div class="modal-actions">
+    <button class="btn ghost" data-action="close-modal">Close</button>
+    <button class="btn" data-action="open-builder">Build level</button>
+    <button class="btn" data-action="open-importer">Import level</button>
+  </div></div>`;
   openModal(html);
 }
 
@@ -734,7 +933,13 @@ function openLevelsDialog() {
  * @param {Level} level
  */
 function openLevelDialog(level) {
-  const dialog = level.startDialog.en_US;
+  const lang = currentLang();
+  const dialog =
+    (level.startDialog && level.startDialog[lang]) ||
+    (lang === 'fa' ? getDialogFa(level.id) : null) ||
+    (level.startDialog && level.startDialog.en_US) ||
+    getDialogFa(level.id) ||
+    null;
   if (!dialog || !dialog.childViews || !dialog.childViews.length) return;
   let html = `<div class="lesson-dialog">`;
   dialog.childViews.forEach((view, index) => {
@@ -806,6 +1011,10 @@ el.btnHint.addEventListener('click', () => {
   else print('No active level.', 'sys');
 });
 el.btnShare.addEventListener('click', () => sharePermalink());
+el.langToggle.addEventListener('click', () => {
+  setLang(currentLang() === 'fa' ? 'en_US' : 'fa');
+  print(currentLang() === 'fa' ? 'زبان: فارسی' : 'Language: English', 'sys');
+});
 
 el.modal.addEventListener('click', (event) => {
   const target = /** @type {HTMLElement} */ (event.target);
@@ -883,6 +1092,62 @@ el.modal.addEventListener('click', (event) => {
         btn.textContent = 'Done';
       }
     }
+  } else if (action === 'bl-capture-start') {
+    builderState.startFS = fs.serialize();
+    builderState.startCwd = fs.cwd;
+    const st = document.getElementById('bl-start-status');
+    if (st) {
+      st.textContent = `captured (${Object.keys(builderState.startFS).length} top-level entries)`;
+      st.classList.add('ok');
+    }
+    const cwdEl = document.getElementById('bl-cwd');
+    if (cwdEl) cwdEl.textContent = fs.cwd;
+    toast('Start tree captured');
+  } else if (action === 'bl-capture-goal') {
+    builderState.goalFS = fs.serialize();
+    builderState.goalCwd = fs.cwd;
+    const st = document.getElementById('bl-goal-status');
+    if (st) {
+      st.textContent = `captured (${Object.keys(builderState.goalFS).length} top-level entries)`;
+      st.classList.add('ok');
+    }
+    toast('Goal tree captured');
+  } else if (action === 'bl-export') {
+    try {
+      const levelJson = collectBuilderLevel();
+      /** @type {HTMLTextAreaElement} */ (document.getElementById('bl-json')).value =
+        JSON.stringify(levelJson, null, 2);
+      toast('JSON ready');
+    } catch (err) {
+      toast(err && err.message ? err.message : 'Export failed');
+    }
+  } else if (action === 'bl-copy') {
+    try {
+      const levelJson = collectBuilderLevel();
+      const text = JSON.stringify(levelJson, null, 2);
+      /** @type {HTMLTextAreaElement} */ (document.getElementById('bl-json')).value = text;
+      navigator.clipboard.writeText(text);
+      toast('Copied to clipboard');
+    } catch (err) {
+      toast(err && err.message ? err.message : 'Copy failed');
+    }
+  } else if (action === 'bl-save') {
+    try {
+      const levelJson = collectBuilderLevel();
+      const level = levelFromJson(levelJson);
+      registerCustomLevel(level);
+      closeModal();
+      startLevel(level.id);
+    } catch (err) {
+      toast(err && err.message ? err.message : 'Save failed');
+    }
+  } else if (action === 'li-load') {
+    const text = /** @type {HTMLTextAreaElement} */ (document.getElementById('li-json')).value;
+    loadImportedLevel(text);
+  } else if (action === 'open-builder') {
+    openLevelBuilder();
+  } else if (action === 'open-importer') {
+    openLevelImporter('');
   }
 });
 
@@ -900,6 +1165,14 @@ function boot() {
   const params = new URLSearchParams(window.location.search);
   const levelId = params.get('level');
   const commands = params.get('command');
+
+  try {
+    const saved = localStorage.getItem('learn-cmd.lang');
+    if (saved === 'fa' || saved === 'en_US') appLang = saved;
+  } catch {
+    /* ignore */
+  }
+  if (el.langToggle) el.langToggle.textContent = currentLang() === 'fa' ? 'FA' : 'EN';
 
   print('Microsoft Windows [Version 10.0.19045.4170]', 'sys');
   print('(learn-cmd virtual machine)', 'sys');
@@ -962,4 +1235,7 @@ window.learnCmd = {
   sequences,
   allLevels,
   baseTree,
+  listCustomLevels,
+  levelFromJson,
+  registerCustomLevel,
 };

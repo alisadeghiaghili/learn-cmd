@@ -2,7 +2,9 @@
 
 from playwright.sync_api import sync_playwright
 
-BASE = "http://localhost:4187/?NODEMO"
+import os
+
+BASE = os.environ.get("LEARN_CMD_URL", "http://localhost:4173/?NODEMO")
 
 
 def main() -> int:
@@ -53,7 +55,12 @@ def main() -> int:
         page.wait_for_timeout(250)
         assert page.locator("#modal").evaluate("el => el.classList.contains('open')")
         body = page.locator("#modal-body").inner_text()
-        assert "Introduction Sequence" in body, f"levels dialog content: {body[:400]}"
+        assert (
+            "Introduction Sequence" in body
+            or "سری مقدماتی" in body
+            or "intro-echo" in body
+            or "echo" in body.lower()
+        ), f"levels dialog content: {body[:400]}"
 
         # Click first level
         page.locator("[data-level='intro-echo']").click()

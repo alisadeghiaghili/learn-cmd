@@ -13,7 +13,9 @@ Nothing touches your real disk. The whole machine is an in-memory tree, so `del 
 - **Sandbox** — free exploration with `undo` and `reset`
 - **Levels** — sequenced lessons (intro, files & paths, pipes, advanced)
 - **Command golf** — each level has a par; your best score is stored in `localStorage`
-- **Lesson dialogs** — markdown explanations and runnable demos, like LGB
+- **Lesson dialogs** — markdown explanations and runnable demos, like LGB (English + Persian)
+- **Level builder** — `build level` captures start/goal trees and exports JSON
+- **Import level** — `import level` plays a shared JSON blob
 - **Real-ish CMD** — `dir`, `cd`, `md`, `rd`, `del`, `copy`, `move`, `ren`, `type`, `tree`, `find`, `findstr`, `sort`, `fc`, `attrib`, `set`, `path`, `where`, redirection (`>` `>>` `<`), pipes (`|`), chaining (`&` `&&` `||`)
 - **Permalinks** — `?level=intro-echo` opens a level; `Share` copies a link
 
@@ -44,7 +46,8 @@ js/commands.js      CMD built-ins
 js/shell.js         parser: quotes, redirection, pipes, chaining
 js/tree.js          live tree renderer
 js/levels.js        lesson sequences and dialogs
-js/app.js           terminal UI, dialogs, golf, persistence
+js/i18n.js          Persian lesson dialogs
+js/app.js           terminal UI, dialogs, golf, builder, persistence
 tests/cmd.test.js   node:test suite
 scripts/serve.js    static preview server
 ```
@@ -64,6 +67,8 @@ scripts/serve.js    static preview server
 | `next` / `prev` | move between levels |
 | `progress` | golf scoreboard |
 | `share` | copy a permalink |
+| `build` | open the level builder |
+| `import level` | paste a level JSON blob |
 
 ## License
 

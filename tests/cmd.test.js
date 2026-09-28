@@ -284,3 +284,36 @@ test('nextLevel walks sequences in order', () => {
 test('cmd error names are CmdError', () => {
   assert.deepEqual(COMMANDS.echo.fn(['hi'], { fs: null }), ['hi']);
 });
+
+test('levelFromJson builds a playable custom level', async () => {
+  const { levelFromJson, registerCustomLevel, listCustomLevels } = await import(
+    '../js/levels.js'
+  );
+  const raw = {
+    id: 'custom-demo',
+    name: { en_US: 'Demo', fa: 'دمو' },
+    hint: { en_US: 'echo hi>out.txt' },
+    startFS: { Users: { student: {} } },
+    goalFS: { Users: { student: { 'out.txt': 'hi\n' } } },
+    solutionCommand: 'echo hi>out.txt',
+    par: 1,
+    startCwd: 'C:\\Users\\student',
+  };
+  const level = levelFromJson(raw);
+  assert.equal(level.id, 'custom-demo');
+  assert.equal(level.name.fa, 'دمو');
+  registerCustomLevel(level);
+  assert.ok(listCustomLevels().some((l) => l.id === 'custom-demo'));
+
+  const fs = new VirtualFileSystem(level.startFS);
+  fs.cwd = 'C:\\Users\\student';
+  executeLine(level.solutionCommand, { fs });
+  const diff = fs.diffGoal(level.goalFS);
+  assert.ok(diff.ok, `custom level unsolved: ${JSON.stringify(diff)}`);
+});
+
+test('levelFromJson rejects incomplete payloads', async () => {
+  const { levelFromJson } = await import('../js/levels.js');
+  assert.throws(() => levelFromJson(/** @type {any} */ ({})), /name/);
+  assert.throws(() => levelFromJson(/** @type {any} */ ({ name: { en_US: 'x' } })), /startFS/);
+});

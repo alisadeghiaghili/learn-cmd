@@ -1416,7 +1416,82 @@ export const sequences = {
  * @returns {Level[]}
  */
 export function allLevels() {
-  return Object.values(sequences).flatMap((s) => s.levels);
+  return [...Object.values(sequences).flatMap((s) => s.levels), ...customLevels];
+}
+
+/** @type {Level[]} */
+const customLevels = [];
+
+/**
+ * Register a user-built level (level builder / import).
+ *
+ * @param {Level} level
+ * @returns {Level}
+ */
+export function registerCustomLevel(level) {
+  const existing = customLevels.findIndex((l) => l.id === level.id);
+  if (existing >= 0) customLevels[existing] = level;
+  else customLevels.push(level);
+  return level;
+}
+
+/**
+ * @returns {Level[]}
+ */
+export function listCustomLevels() {
+  return [...customLevels];
+}
+
+/**
+ * Build a playable Level object from a JSON blob (import level).
+ *
+ * @param {Record<string, unknown>} raw
+ * @returns {Level}
+ */
+export function levelFromJson(raw) {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('Level JSON must be an object.');
+  }
+  const name = raw.name;
+  const startFS = raw.startFS;
+  const goalFS = raw.goalFS;
+  if (!name || typeof name !== 'object') throw new Error('Level JSON requires name.');
+  if (!startFS || typeof startFS !== 'object') throw new Error('Level JSON requires startFS.');
+  if (!goalFS || typeof goalFS !== 'object') throw new Error('Level JSON requires goalFS.');
+
+  /** @type {Level} */
+  const level = {
+    id: String(raw.id || 'custom-' + Date.now()),
+    name: /** @type {Record<string, string>} */ (name),
+    hint: /** @type {Record<string, string>} */ (raw.hint || { en_US: '' }),
+    about: /** @type {Record<string, string>} */ (raw.about || { en_US: 'Custom level' }),
+    startFS: /** @type {Record<string, unknown>} */ (startFS),
+    goalFS: /** @type {Record<string, unknown>} */ (goalFS),
+    solutionCommand: String(raw.solutionCommand || ''),
+    par: raw.par != null ? Number(raw.par) : undefined,
+    goalCommands: Array.isArray(raw.goalCommands) ? raw.goalCommands.map(String) : undefined,
+    startCwd: raw.startCwd ? String(raw.startCwd) : 'C:\\Users\\student',
+    goalCwd: raw.goalCwd ? String(raw.goalCwd) : undefined,
+    startDialog: {
+      en_US: {
+        childViews: [
+          {
+            type: 'ModalAlert',
+            options: {
+              markdowns: [
+                `## ${String(/** @type {Record<string, string>} */ (name).en_US || 'Custom level')}`,
+                '',
+                String(raw.intro || 'Reach the goal tree using CMD commands.'),
+                '',
+                `**Hint:** ${String(/** @type {Record<string, string>} */ (raw.hint || { en_US: '' }).en_US || '')}`,
+              ],
+            },
+          },
+        ],
+      },
+    },
+  };
+  return level;
 }
 
 /**

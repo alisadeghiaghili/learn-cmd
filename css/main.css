@@ -774,6 +774,84 @@ li {
   margin: 14px 0;
 }
 
+/* Level builder */
+
+.field-label {
+  display: block;
+  margin: 12px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.text-input,
+.text-area {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.text-input:focus,
+.text-area:focus {
+  border-color: var(--peri-dim);
+}
+
+.text-area {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.builder-captures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0 8px;
+}
+
+.capture-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.capture-title {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.capture-status {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.capture-status.ok {
+  color: var(--mint);
+}
+
+.builder-cwd {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 8px 0 4px;
+}
+
+.builder-cwd code {
+  color: var(--mint);
+}
+
 /* Toast */
 
 .toast {
