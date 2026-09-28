@@ -2,6 +2,8 @@
 
 Interactive Windows CMD trainer with a live filesystem visualizer, free sandbox, and leveled challenges with command golf. Inspired by [learnGitBranching](https://github.com/pcottle/learnGitBranching).
 
+Windows 11 Fluent UI, Segoe UI Variable + Cascadia Code, EN/FA lesson dialogs.
+
 ## What it is
 
 learnGitBranching teaches git by drawing the commit graph while you type. learn-cmd applies the same idea to `cmd.exe`: the left panel is a live map of a virtual `C:` drive, the right panel is a virtual command prompt. Every command updates the tree immediately.

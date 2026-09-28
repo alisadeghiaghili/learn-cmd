@@ -1186,7 +1186,7 @@ function boot() {
     enterSandbox();
     openModal(`
       <div class="intro-card">
-        <h2>learn-cmd</h2>
+        <h2><img class="intro-logo" src="assets/logo.svg" width="48" height="48" alt="" /> learn-cmd</h2>
         <p>An interactive Windows CMD trainer — sandbox, live filesystem tree, and leveled challenges with command golf. Inspired by <em>learnGitBranching</em>.</p>
         <ul class="intro-list">
           <li><strong>Sandbox</strong> — free play with <code>undo</code> / <code>reset</code></li>
