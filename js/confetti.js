@@ -7,7 +7,7 @@
 
 'use strict';
 
-const COLORS = ['#00A4EF', '#2DD4BF', '#F59E0B', '#34D399', '#60A5FA', '#F472B6', '#E8EEF4'];
+const COLORS = ['#60CDFF', '#2DD4BF', '#F59E0B', '#34D399', '#388BFD', '#FF8C1A', '#E8EEF4'];
 
 /**
  * @typedef {Object} ConfettiHandle
@@ -17,10 +17,10 @@ const COLORS = ['#00A4EF', '#2DD4BF', '#F59E0B', '#34D399', '#60A5FA', '#F472B6'
 /**
  * Launch full-screen confetti particles.
  *
- * @param {number} [durationMs=4500]
+ * @param {number} [durationMs=4800]
  * @returns {ConfettiHandle | null}
  */
-export function launchConfetti(durationMs = 4500) {
+export function launchConfetti(durationMs = 4800) {
   if (typeof document === 'undefined') return null;
 
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;

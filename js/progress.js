@@ -7,7 +7,7 @@
 
 'use strict';
 
-import { allLevels, nextLevel } from './levels.js';
+import { allLevels, nextLevel, locateLevel, sequences } from './levels.js';
 
 export const STORAGE_KEY = 'learn-cmd.progress.v2';
 export const COOKIE_KEY = 'learn_cmd_progress';
@@ -149,9 +149,15 @@ export function summarizeCurriculum(progress, lang = 'en') {
   for (const lvl of levels) {
     const nameStr =
       (lvl.name && (lvl.name[lang] || lvl.name.en_US || Object.values(lvl.name)[0])) || lvl.id;
+    const locSeq = locateLevel(lvl.id);
+    const seq = locSeq ? sequences[locSeq.sequenceKey] : null;
+    const seriesTitle = seq && seq.displayName
+      ? (seq.displayName[lang] || seq.displayName.en_US || locSeq.sequenceKey)
+      : (locSeq?.sequenceKey || '');
     const item = {
       id: lvl.id,
       name: nameStr,
+      seriesTitle,
       commands: [lvl.solutionCommand],
     };
     if (progress[lvl.id]?.solved) {

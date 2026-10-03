@@ -15,6 +15,7 @@ import {
   getLevel,
   nextLevel,
   prevLevel,
+  locateLevel,
   registerCustomLevel,
   listCustomLevels,
   levelFromJson,
@@ -707,30 +708,47 @@ class App {
 
   celebrateSolve() {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-    this.confettiHandle = launchConfetti(4500);
+    this.confettiHandle = launchConfetti(4800);
     playFanfare();
 
     const u = ui();
+    const loc = getLocale();
     const lvl = this.level;
     const nextLvl = nextLevel(lvl.id);
-    const curriculum = summarizeCurriculum(this.progress, getLocale());
-    const count = this.golf.length;
+    const cmds = this.golf.length || null;
+    const curriculum = summarizeCurriculum(this.progress, loc);
     const par = lvl.par || 1;
-    const scoreMsg =
-      count <= par
-        ? `Par met! ${count}/${par} commands.`
-        : `Solved in ${count} commands (par was ${par}).`;
+    const underPar = cmds !== null && cmds <= par;
+    const golfLine =
+      cmds === null
+        ? u.idealForLevel(par)
+        : underPar
+          ? `**${cmds}** ${u.idealForLevelShort(par)}`
+          : `**${cmds}** ${cmds === 1 ? 'command' : 'commands'}. Ideal is ${par}. Still counts — you got there.`;
 
     const share = buildShareTargets({
-      levelName: lvl.name[getLocale()] || lvl.name.en_US || lvl.id,
+      levelName: lvl.name[loc] || lvl.name.en_US || lvl.id,
       levelId: lvl.id,
-      commands: count,
+      commands: cmds,
       par,
       curriculum,
     });
 
     const cheers = u.cheers;
-    const cheer = cheers[Math.floor(Math.random() * cheers.length)];
+    const cheer = cheers[Math.floor(Math.random() * cheers.length)] || '';
+
+    const locSeq = locateLevel(lvl.id);
+    const seq = locSeq ? sequences[locSeq.sequenceKey] : null;
+    const seriesTitle = seq && seq.displayName
+      ? (seq.displayName[loc] || seq.displayName.en_US || locSeq.sequenceKey)
+      : (locSeq?.sequenceKey || '');
+
+    const total = allLevels().length;
+    const solvedCount = curriculum.solvedCount;
+
+    const learnedPreview = curriculum.learned
+      .map((l) => `<li>${escapeHtml(l.seriesTitle ? l.seriesTitle + ': ' : '')}${escapeHtml(l.name)}</li>`)
+      .join('');
 
     const modalHtml = `
       <div class="celebrate" aria-live="polite">
@@ -739,35 +757,40 @@ class App {
           <div class="celebrate-star">★</div>
         </div>
         <div class="celebrate-badge">${escapeHtml(u.levelSolvedBanner)}</div>
-        <h3 class="celebrate-title">${escapeHtml(lvl.name[getLocale()] || lvl.name.en_US)}</h3>
-        <p class="celebrate-sub"><code>${escapeHtml(lvl.id)}</code></p>
+        <h3 class="celebrate-title">${escapeHtml(lvl.name[loc] || lvl.name.en_US)}</h3>
+        <p class="celebrate-sub">${escapeHtml(seriesTitle)} · <code>${escapeHtml(lvl.id)}</code></p>
         <p class="celebrate-cheer">${escapeHtml(cheer)}</p>
-        <div class="celebrate-stats">
-          <strong>${escapeHtml(scoreMsg)}</strong>
-        </div>
+        <div class="celebrate-stats">${renderMarkdown(golfLine)}</div>
         <div class="celebrate-progress">
-          <div class="prog-track">
-            <div class="prog-fill" style="width: ${curriculum.percent}%"></div>
-          </div>
-          <div class="par-note">${curriculum.solvedCount} / ${curriculum.total} levels solved (${curriculum.percent}%)</div>
+          <div class="prog-track"><div class="prog-fill" style="width: ${curriculum.percent}%"></div></div>
+          <div class="par-note">${escapeHtml(u.solvedCountLabel ? u.solvedCountLabel(solvedCount, total) : `${solvedCount} / ${total} levels solved`)}</div>
         </div>
         <div class="share-block">
           <div class="next-title">${escapeHtml(u.shareTitle)}</div>
-          <div class="share-row">
-            <button type="button" class="btn share-btn linkedin" data-share="linkedin">LinkedIn</button>
-            <button type="button" class="btn share-btn x" data-share="x">X / Twitter</button>
-            <button type="button" class="btn share-btn facebook" data-share="facebook">Facebook</button>
-            <button type="button" class="btn share-btn copy" data-share="copy">${escapeHtml(u.copyPost)}</button>
+          <div class="learned-preview">
+            <div class="par-note">${escapeHtml(u.styleList)}</div>
+            <ul>${learnedPreview || `<li>${escapeHtml(u.solveMoreLevels)}</li>`}</ul>
           </div>
-          <div class="share-status" id="share-status" hidden></div>
+          <div class="share-row" role="group" aria-label="${escapeHtml(u.shareGroupLabel)}">
+            <button type="button" class="share-btn linkedin" data-share="linkedin">${escapeHtml(u.linkedin)}</button>
+            <button type="button" class="share-btn x" data-share="x">${escapeHtml(u.xTwitter)}</button>
+            <button type="button" class="share-btn facebook" data-share="facebook">${escapeHtml(u.facebook)}</button>
+            <button type="button" class="share-btn copy" data-share="copy">${escapeHtml(u.copyPost)}</button>
+          </div>
+          <div class="share-status" data-share-status hidden></div>
         </div>
+        ${
+          nextLvl
+            ? `<div class="celebrate-next">${renderMarkdown(u.nextCelebration(nextLvl.id, nextLvl.name[loc] || nextLvl.name.en_US))}</div>`
+            : `<div class="celebrate-next">${renderMarkdown(u.lastInPack)}</div>`
+        }
         <div class="modal-actions">
+          <button type="button" class="btn ghost" data-action="close-modal">${escapeHtml(u.baskInIt)}</button>
           ${
             nextLvl
               ? `<button type="button" class="btn primary" data-action="next-level">${escapeHtml(u.celebrateOn(nextLvl.id))}</button>`
               : `<button type="button" class="btn primary" data-action="open-levels">${escapeHtml(u.browseLevels)}</button>`
           }
-          <button type="button" class="btn ghost" data-action="close-modal">${escapeHtml(u.baskInIt)}</button>
         </div>
       </div>
     `;
@@ -775,14 +798,18 @@ class App {
     this.openModal(modalHtml, { isCelebrate: true });
 
     this.modalContentEl.querySelectorAll('[data-share]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const kind = btn.getAttribute('data-share');
-        const res = await shareWithClipboard(kind, share);
-        const status = document.getElementById('share-status');
-        if (status) {
-          status.hidden = false;
-          status.textContent = res.copied ? u.copyOk : u.shareOpened;
+      btn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        const kind = btn.getAttribute('data-share') || 'copy';
+        const status = this.modalContentEl.querySelector('[data-share-status]');
+        const result = await shareWithClipboard(kind, share);
+        if (!status) return;
+        status.hidden = false;
+        if (kind === 'copy') {
+          status.textContent = result.copied ? u.copyOk : u.copyFail;
+          return;
         }
+        status.textContent = result.copied ? u.shareCopied : u.shareOpened;
       });
     });
 
@@ -806,6 +833,13 @@ class App {
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.closeModal());
     }
+
+    this.modalContentEl.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    });
   }
 
   showHint() {
