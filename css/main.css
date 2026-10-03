@@ -1001,6 +1001,12 @@ button.ghost,
   opacity: 0.85;
 }
 
+.overlay-celebrate {
+  background: rgba(6, 10, 14, 0.82);
+  backdrop-filter: blur(2px);
+}
+
+.modal.modal-celebrate,
 .modal-celebrate {
   width: min(520px, 100%);
   text-align: center;
@@ -1009,6 +1015,7 @@ button.ghost,
     0 0 0 1px color-mix(in srgb, var(--ok) 20%, transparent),
     0 24px 80px rgba(52, 211, 153, 0.15),
     0 20px 60px rgba(0, 0, 0, 0.55);
+  animation: celebrate-pop 420ms cubic-bezier(0.2, 0.9, 0.25, 1.2);
 }
 
 .celebrate {
@@ -1018,8 +1025,8 @@ button.ghost,
 
 .celebrate-visual {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 88px;
+  height: 88px;
   margin: 0 auto 10px;
   display: grid;
   place-items: center;
@@ -1031,13 +1038,66 @@ button.ghost,
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--ok) 55%, transparent);
   background: radial-gradient(circle, color-mix(in srgb, var(--ok) 22%, transparent), transparent 70%);
+  animation: ring-pulse 1.8s ease-out infinite;
 }
 
 .celebrate-star {
   position: relative;
-  font-size: 38px;
+  font-size: 42px;
   line-height: 1;
   color: var(--remote);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--remote) 55%, transparent);
+  animation: star-bounce 700ms cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+
+@keyframes celebrate-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ring-pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 0.25;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes star-bounce {
+  0% {
+    transform: scale(0.3) rotate(-20deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15) rotate(6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-celebrate,
+  .modal.modal-celebrate,
+  .celebrate-badge,
+  .celebrate-ring,
+  .celebrate-star {
+    animation: none;
+  }
 }
 
 .celebrate-badge {

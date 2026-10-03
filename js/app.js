@@ -388,13 +388,18 @@ class App {
     setTimeout(() => this.toastEl.classList.remove('show'), 2400);
   }
 
-  openModal(html) {
+  openModal(html, { isCelebrate = false } = {}) {
     this.modalContentEl.innerHTML = html;
+    this.modalEl.classList.toggle('overlay-celebrate', isCelebrate);
+    this.modalContentEl.classList.toggle('modal-celebrate', isCelebrate);
     this.modalEl.classList.add('open');
   }
 
   closeModal() {
-    this.modalEl.classList.remove('open');
+    this.confettiHandle?.stop?.();
+    this.confettiHandle = null;
+    this.modalEl.classList.remove('open', 'overlay-celebrate');
+    this.modalContentEl.classList.remove('modal-celebrate');
     this.modalContentEl.innerHTML = '';
     this.terminal.focus();
   }
@@ -620,10 +625,12 @@ class App {
     }
 
     const afterSpec = this.fs.serialize();
-    if (JSON.stringify(beforeSpec) !== JSON.stringify(afterSpec) || beforeSnap.cwd !== this.fs.cwd) {
+    if (result.ok) {
       this.undoStack.push(beforeSnap);
       if (this.undoStack.length > 50) this.undoStack.shift();
-      this.golf.push(cmd);
+      if (this.mode === 'level') {
+        this.golf.push(cmd);
+      }
     }
 
     this.flashPaths = diffNewPaths(beforeSpec, afterSpec);
@@ -691,12 +698,16 @@ class App {
 
     if (!this.solvedFlash) {
       this.solvedFlash = true;
+      this.terminal.push('out', '');
+      this.terminal.push('ok', `${ui().levelSolvedBanner} — ${this.level.name[getLocale()] || this.level.name.en_US}`);
+      this.terminal.push('meta', ui().partyMode);
       this.celebrateSolve();
     }
   }
 
   celebrateSolve() {
-    launchConfetti(4500);
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    this.confettiHandle = launchConfetti(4500);
     playFanfare();
 
     const u = ui();
@@ -722,48 +733,46 @@ class App {
     const cheer = cheers[Math.floor(Math.random() * cheers.length)];
 
     const modalHtml = `
-      <div class="modal-celebrate" aria-live="polite">
-        <div class="celebrate">
-          <div class="celebrate-visual" aria-hidden="true">
-            <div class="celebrate-ring"></div>
-            <div class="celebrate-star">★</div>
+      <div class="celebrate" aria-live="polite">
+        <div class="celebrate-visual" aria-hidden="true">
+          <div class="celebrate-ring"></div>
+          <div class="celebrate-star">★</div>
+        </div>
+        <div class="celebrate-badge">${escapeHtml(u.levelSolvedBanner)}</div>
+        <h3 class="celebrate-title">${escapeHtml(lvl.name[getLocale()] || lvl.name.en_US)}</h3>
+        <p class="celebrate-sub"><code>${escapeHtml(lvl.id)}</code></p>
+        <p class="celebrate-cheer">${escapeHtml(cheer)}</p>
+        <div class="celebrate-stats">
+          <strong>${escapeHtml(scoreMsg)}</strong>
+        </div>
+        <div class="celebrate-progress">
+          <div class="prog-track">
+            <div class="prog-fill" style="width: ${curriculum.percent}%"></div>
           </div>
-          <div class="celebrate-badge">${escapeHtml(u.levelSolvedBanner)}</div>
-          <h3 class="celebrate-title">${escapeHtml(lvl.name[getLocale()] || lvl.name.en_US)}</h3>
-          <p class="celebrate-sub"><code>${escapeHtml(lvl.id)}</code></p>
-          <p class="celebrate-cheer">${escapeHtml(cheer)}</p>
-          <div class="celebrate-stats">
-            <strong>${escapeHtml(scoreMsg)}</strong>
+          <div class="par-note">${curriculum.solvedCount} / ${curriculum.total} levels solved (${curriculum.percent}%)</div>
+        </div>
+        <div class="share-block">
+          <div class="next-title">${escapeHtml(u.shareTitle)}</div>
+          <div class="share-row">
+            <button type="button" class="btn share-btn linkedin" data-share="linkedin">LinkedIn</button>
+            <button type="button" class="btn share-btn x" data-share="x">X / Twitter</button>
+            <button type="button" class="btn share-btn facebook" data-share="facebook">Facebook</button>
+            <button type="button" class="btn share-btn copy" data-share="copy">${escapeHtml(u.copyPost)}</button>
           </div>
-          <div class="celebrate-progress">
-            <div class="prog-track">
-              <div class="prog-fill" style="width: ${curriculum.percent}%"></div>
-            </div>
-            <div class="par-note">${curriculum.solvedCount} / ${curriculum.total} levels solved (${curriculum.percent}%)</div>
-          </div>
-          <div class="share-block">
-            <div class="next-title">${escapeHtml(u.shareTitle)}</div>
-            <div class="share-row">
-              <button type="button" class="btn share-btn linkedin" data-share="linkedin">LinkedIn</button>
-              <button type="button" class="btn share-btn x" data-share="x">X / Twitter</button>
-              <button type="button" class="btn share-btn facebook" data-share="facebook">Facebook</button>
-              <button type="button" class="btn share-btn copy" data-share="copy">${escapeHtml(u.copyPost)}</button>
-            </div>
-            <div class="share-status" id="share-status" hidden></div>
-          </div>
-          <div class="modal-actions">
-            ${
-              nextLvl
-                ? `<button type="button" class="btn primary" data-action="next-level">${escapeHtml(u.celebrateOn(nextLvl.id))}</button>`
-                : `<button type="button" class="btn primary" data-action="open-levels">${escapeHtml(u.browseLevels)}</button>`
-            }
-            <button type="button" class="btn ghost" data-action="close-modal">${escapeHtml(u.baskInIt)}</button>
-          </div>
+          <div class="share-status" id="share-status" hidden></div>
+        </div>
+        <div class="modal-actions">
+          ${
+            nextLvl
+              ? `<button type="button" class="btn primary" data-action="next-level">${escapeHtml(u.celebrateOn(nextLvl.id))}</button>`
+              : `<button type="button" class="btn primary" data-action="open-levels">${escapeHtml(u.browseLevels)}</button>`
+          }
+          <button type="button" class="btn ghost" data-action="close-modal">${escapeHtml(u.baskInIt)}</button>
         </div>
       </div>
     `;
 
-    this.openModal(modalHtml);
+    this.openModal(modalHtml, { isCelebrate: true });
 
     this.modalContentEl.querySelectorAll('[data-share]').forEach((btn) => {
       btn.addEventListener('click', async () => {

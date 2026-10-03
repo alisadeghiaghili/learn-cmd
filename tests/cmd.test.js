@@ -399,3 +399,23 @@ test('i18n exports valid dictionaries and handles locale switching', async () =>
   assert.ok(Array.isArray(localized.learning));
 });
 
+test('command-only levels solve properly when executed and recorded in golf', async () => {
+  const { getLevel } = await import('../js/levels.js');
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+
+  const lvl = getLevel('intro-echo');
+  assert.ok(lvl);
+  const fs = new VirtualFileSystem(lvl.startFS);
+  if (lvl.startCwd) fs.cwd = lvl.startCwd;
+
+  const golf = [];
+  const res = executeLine('echo hello', { fs });
+  assert.ok(res.ok);
+  golf.push('echo hello');
+
+  const diff = fs.diffGoalWithCommands(lvl.goalFS, lvl.goalCwd, lvl.goalCommands || null, golf);
+  assert.ok(diff.ok, 'intro-echo should be solved when echo hello is run and in golf');
+  assert.equal(diff.missingCommands.length, 0);
+});
+
