@@ -472,7 +472,6 @@ class App {
     const learning = lvl.learning || [];
     const fieldNotes = lvl.fieldNotes || [];
 
-    const statusIcon = solved ? '✓' : '▶';
     const nextBox = solved
       ? `<div class="next-box met">${escapeHtml(u.allSolutionMet)}</div>`
       : `<div class="next-box">
@@ -483,6 +482,25 @@ class App {
           </div>
           <div class="par-note">${escapeHtml(u.wrongCommandNote)}</div>
         </div>`;
+
+    const steps = (lvl.goalCommands && lvl.goalCommands.length > 0)
+      ? lvl.goalCommands
+      : (lvl.solutionCommand ? lvl.solutionCommand.split(' & ') : [lvl.id]);
+
+    const items = steps.map((cmd, i) => {
+      const isCurrent = !solved && i === 0;
+      const isMet = solved;
+      return `<li class="${isMet ? 'met' : ''}${isCurrent ? ' current' : ''}">
+        <div class="g-label" dir="ltr">${isMet ? '✓' : isCurrent ? '▶' : '○'} <code>${escapeHtml(cmd)}</code>${
+          isCurrent ? ` <span class="chip current-chip">${escapeHtml(u.nowChip || 'now')}</span>` : ''
+        }</div>
+        <div class="g-detail" dir="ltr">${escapeHtml(isMet ? 'Criterion met' : `run '${cmd}'`)}</div>
+      </li>`;
+    });
+
+    const stateNotesHtml = !solved && diff.missingPaths && diff.missingPaths.length
+      ? `<div class="par-note">${escapeHtml(u.stateNotes || 'State notes:')} ${escapeHtml(diff.missingPaths.slice(0, 3).join(' · '))}</div>`
+      : '';
 
     this.dockEl.innerHTML = `
       <h2>${escapeHtml(name)}</h2>
@@ -506,12 +524,8 @@ class App {
       <div class="par-note">${escapeHtml(golfNote)}</div>
       ${this.solvedFlash ? `<div class="next-box met">${escapeHtml(u.levelSolvedBanner)}</div>` : ''}
       ${nextBox}
-      <ul class="goal-list">
-        <li class="${solved ? 'met' : 'current'}">
-          <div class="g-label">${statusIcon} <code>${escapeHtml(lvl.solutionCommand)}</code></div>
-          <div class="g-detail">${escapeHtml(diff.ok ? 'Criterion met' : 'Target state pending')}</div>
-        </li>
-      </ul>
+      <ul class="goal-list">${items.join('')}</ul>
+      ${stateNotesHtml}
     `;
   }
 
