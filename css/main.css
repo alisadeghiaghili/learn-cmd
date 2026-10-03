@@ -1356,6 +1356,54 @@ button.ghost,
   margin-top: 0;
 }
 
+.welcome-dialog {
+  max-width: 580px;
+}
+
+.welcome-dialog h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.quality-card {
+  margin: 14px 0;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--cmd-stroke);
+  border-radius: 8px;
+}
+
+.quality-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.q-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--cmd-soft);
+  color: var(--text);
+  border: 1px solid var(--cmd-stroke);
+}
+
+.q-badge strong {
+  color: var(--cmd);
+  font-weight: 700;
+}
+
+.quality-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
 .levels-sub {
   color: var(--haze);
   font-size: 13px;

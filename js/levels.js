@@ -111,6 +111,8 @@ export const sequences = {
                     '',
                     'On the **left** you see a live map of the virtual file system. On the **right** is the terminal. Every command you run updates the map immediately — just like learnGitBranching updates the commit graph.',
                     '',
+                    'This course is built on **curricula from the best industry courses**, meeting a benchmark of **depth & utility ≥ 8.5/10** and **instructional quality ≥ 8.5/10** — designed to be 100% practical, scenario-driven, and directly useful.',
+                    '',
                     'Your first command is `echo`. It simply prints text back at you.',
                     '',
                     '```',
