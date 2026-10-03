@@ -317,3 +317,85 @@ test('levelFromJson rejects incomplete payloads', async () => {
   assert.throws(() => levelFromJson(/** @type {any} */ ({})), /name/);
   assert.throws(() => levelFromJson(/** @type {any} */ ({ name: { en_US: 'x' } })), /startFS/);
 });
+
+test('parseVisitorBadgeSvg extracts count and handles scale suffixes', async () => {
+  const { parseVisitorBadgeSvg } = await import('../js/visitor-counter.js');
+  assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: 1,420</title></svg>'), 1420);
+  assert.equal(parseVisitorBadgeSvg('<svg><title>visitors: 2.5k</title></svg>'), 2500);
+  assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: 1M</title></svg>'), 1000000);
+  assert.equal(parseVisitorBadgeSvg('invalid svg content'), null);
+  assert.equal(parseVisitorBadgeSvg(''), null);
+});
+
+test('buildShareTargets formats share messages and social links', async () => {
+  const { buildShareTargets } = await import('../js/share.js');
+  const dummyCurriculum = {
+    solvedCount: 5,
+    total: 21,
+    learned: [],
+    remaining: [],
+    next: null,
+    percent: 24,
+  };
+  const targets = buildShareTargets({
+    levelName: 'Echo Intro',
+    levelId: 'intro-echo',
+    commands: 1,
+    par: 1,
+    curriculum: dummyCurriculum,
+  });
+
+  assert.ok(targets.linkedin.includes('linkedin.com'));
+  assert.ok(targets.x.includes('twitter.com'));
+  assert.ok(targets.facebook.includes('facebook.com'));
+  assert.match(targets.text, /Echo Intro/);
+  assert.match(targets.text, /5 of 21/);
+});
+
+test('summarizeCurriculum and resumeLine calculate correct stats', async () => {
+  const { summarizeCurriculum, resumeLine } = await import('../js/progress.js');
+  const progress = {
+    'intro-echo': { solved: true, best: 1 },
+    'intro-dir': { solved: true, best: 1 },
+  };
+
+  const summary = summarizeCurriculum(progress, 'en');
+  assert.equal(summary.solvedCount, 2);
+  assert.ok(summary.percent > 0);
+  assert.ok(summary.learned.length === 2);
+  assert.equal(summary.next?.id, 'intro-cd');
+
+  const lineEn = resumeLine(summary, 'en');
+  assert.match(lineEn, /2\//);
+  assert.match(lineEn, /intro-cd/);
+
+  const lineFa = resumeLine(summary, 'fa');
+  assert.match(lineFa, /پیشرفت ذخیره‌شده/);
+});
+
+test('i18n exports valid dictionaries and handles locale switching', async () => {
+  const { LOCALES, ui, localizeLevel } = await import('../js/i18n.js');
+  assert.deepEqual(LOCALES, ['en', 'fa', 'de']);
+
+  for (const loc of LOCALES) {
+    const strings = ui(loc);
+    assert.ok(strings.levels);
+    assert.ok(strings.guide);
+    assert.ok(strings.hint);
+    assert.ok(strings.solution);
+    assert.ok(Array.isArray(strings.quiz));
+    assert.ok(strings.quiz.length >= 3);
+  }
+
+  const dummyLvl = {
+    id: 'intro-echo',
+    name: { en_US: 'Echo', fa: 'اکو' },
+    hint: { en_US: 'type echo' },
+    about: { en_US: 'intro' },
+  };
+  const localized = localizeLevel(dummyLvl, 'fa');
+  assert.equal(localized.name.fa, 'اکو');
+  assert.ok(localized.objective);
+  assert.ok(Array.isArray(localized.learning));
+});
+

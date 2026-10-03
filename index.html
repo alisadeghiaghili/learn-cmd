@@ -6,76 +6,114 @@
     <title>learn-cmd — Interactive Windows CMD Tutorial</title>
     <meta
       name="description"
-      content="Learn the Windows command line with a live filesystem visualizer, sandbox, and leveled challenges. Inspired by learnGitBranching."
+      content="Learn the Windows command line through an interactive sandbox: live filesystem tree, leveled challenges, and command golf. Inspired by learnGitBranching."
     />
-    <meta name="theme-color" content="#202020" />
+    <meta name="theme-color" content="#0e1318" />
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="alternate icon" href="assets/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/main.css?v=2.0.0" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <img class="brand-mark" src="assets/logo.svg" width="28" height="28" alt="learn-cmd" />
-        <div class="brand-text">
-          <div class="brand-name">learn-<span>cmd</span></div>
-          <div class="brand-sub">Windows 11</div>
-        </div>
-      </div>
-      <span id="mode-label" class="mode-chip">SANDBOX</span>
-      <div id="level-title">Free exploration</div>
-      <div class="golf-box" title="Command golf — commands used this run / par">
-        golf <strong id="golf-score">0</strong>
-        <span>/ par <span id="golf-par">—</span></span>
-      </div>
-      <div class="actions">
-        <button id="lang-toggle" class="btn" type="button" title="Switch language">FA</button>
-        <button id="btn-levels" class="btn" type="button">Levels</button>
-        <button id="btn-sandbox" class="btn" type="button">Sandbox</button>
-        <button id="btn-hint" class="btn" type="button">Hint</button>
-        <button id="btn-undo" class="btn" type="button" disabled>Undo</button>
-        <button id="btn-reset" class="btn" type="button">Reset</button>
-        <button id="btn-share" class="btn" type="button">Share</button>
-      </div>
-    </header>
+    <div id="app">
+      <div class="app-main">
+        <header class="toolbar">
+          <div class="brand" data-help-id="brand">Learn<span>CMD</span></div>
+          <div class="level-title" id="level-title" data-help-id="level-title">sandbox mode</div>
 
-    <main class="main">
-      <section class="panel" aria-label="Filesystem tree">
-        <div class="panel-head">
-          <span>File system</span>
-          <span>live</span>
-        </div>
-        <div id="fs-tree" class="panel-body"></div>
-        <div id="goal-panel" class="goal-panel"></div>
-      </section>
+          <div class="toolbar-actions" data-help-id="toolbar">
+            <div class="lang-menu">
+              <button
+                type="button"
+                class="lang-btn"
+                data-action="lang-toggle"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-label="Language"
+              >
+                <span data-lang-label>EN</span>
+                <span class="lang-caret" aria-hidden="true"></span>
+              </button>
+              <div class="lang-dropdown" id="lang-dropdown" role="menu" hidden>
+                <button type="button" class="lang-option on" data-lang="en" role="menuitem" aria-checked="true">EN</button>
+                <button type="button" class="lang-option" data-lang="fa" role="menuitem" aria-checked="false">FA</button>
+                <button type="button" class="lang-option" data-lang="de" role="menuitem" aria-checked="false">DE</button>
+              </div>
+            </div>
 
-      <section class="panel term" aria-label="Terminal">
-        <div class="panel-head">
-          <span>cmd.exe</span>
-          <span>virtual</span>
-        </div>
-        <div id="term-body" class="term-body" aria-live="polite"></div>
-        <div class="term-input-row">
-          <span id="term-prompt">C:\Users\student&gt;</span>
-          <input
-            id="term-input"
-            type="text"
-            spellcheck="false"
-            autocomplete="off"
-            autocapitalize="off"
-            aria-label="Command input"
-          />
-        </div>
-      </section>
-    </main>
+            <button
+              type="button"
+              class="nav-toggle"
+              data-action="nav-toggle"
+              aria-label="Menu"
+              aria-expanded="false"
+              aria-controls="nav-drawer"
+            >
+              <span class="nav-bars" aria-hidden="true"></span>
+            </button>
 
-    <div id="modal" class="modal" role="dialog" aria-modal="true">
-      <div id="modal-body"></div>
+            <div class="nav-drawer" id="nav-drawer" hidden>
+              <button type="button" data-action="levels">Levels</button>
+              <button type="button" data-action="lesson" title="Replay lesson dialog">Lesson</button>
+              <button type="button" data-action="goal">Guide</button>
+              <button type="button" data-action="hint">Hint</button>
+              <button type="button" data-action="solution">Solution</button>
+              <button type="button" data-action="undo">Undo</button>
+              <button type="button" data-action="reset">Reset</button>
+              <button type="button" data-action="sandbox" class="ghost">Sandbox</button>
+              <button type="button" class="help-btn" data-action="help" title="UI Guide" aria-label="Help">?</button>
+            </div>
+
+            <span class="tb-stat visitors" id="visitor-stat" data-help-id="links" title="Unique learners practicing CMD here">
+              <svg class="visitor-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+                <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0-2.21-2.69-4-6-4s-6 1.79-6 4v1h12v-1zm-1.07 0H3.07C3.56 11.83 5.48 11 8 11s4.44.83 4.93 2z"/>
+              </svg>
+              <span class="visitor-count" id="visitor-count">5</span>
+            </span>
+
+            <a
+              class="tb-link gh"
+              data-help-id="links"
+              href="https://github.com/alisadeghiaghili/learn-cmd"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="GitHub repository"
+              aria-label="GitHub repository"
+            >
+              <svg class="gh-mark" viewBox="0 0 16 16" aria-hidden="true" width="18" height="18">
+                <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+            </a>
+
+            <a
+              class="tb-link support"
+              data-help-id="links"
+              href="https://www.buymeacoffee.com/alisadeghil"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Buy me a coffee"
+            >
+              Buy me a coffee
+            </a>
+          </div>
+        </header>
+
+        <div class="board-wrap" id="board-wrap" data-help-id="tree">
+          <div id="fs-tree"></div>
+        </div>
+
+        <div class="terminal" id="terminal" data-help-id="terminal"></div>
+      </div>
+
+      <aside class="dock" id="dock" data-help-id="dock" aria-label="Learning guide"></aside>
+    </div>
+
+    <div id="modal" class="overlay" role="dialog" aria-modal="true">
+      <div class="modal" id="modal-body"></div>
     </div>
 
     <div id="toast" class="toast" role="status"></div>
 
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=2.0.0"></script>
   </body>
 </html>

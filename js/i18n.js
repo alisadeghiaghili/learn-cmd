@@ -771,3 +771,520 @@ export const dialogsFa = {
 export function getDialogFa(levelId) {
   return dialogsFa[levelId] || null;
 }
+
+export const LOCALES = ['en', 'fa', 'de'];
+
+let currentLocale = 'en';
+
+export function getLocale() {
+  if (typeof localStorage !== 'undefined') {
+    const saved = localStorage.getItem('learn-cmd.lang');
+    if (saved === 'fa' || saved === 'en' || saved === 'de') {
+      currentLocale = saved;
+    }
+  }
+  return currentLocale;
+}
+
+export function setLocale(loc) {
+  if (LOCALES.includes(loc)) {
+    currentLocale = loc;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('learn-cmd.lang', loc);
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = loc === 'fa' ? 'fa' : loc === 'de' ? 'de' : 'en';
+      document.documentElement.dir = loc === 'fa' ? 'rtl' : 'ltr';
+    }
+  }
+}
+
+export const UI_STRINGS = {
+  en: {
+    language: 'Language',
+    menuLabel: 'Navigation menu',
+    levels: 'Levels',
+    lesson: 'Lesson',
+    lessonTitle: 'Replay lesson dialog',
+    guide: 'Guide',
+    hint: 'Hint',
+    solution: 'Solution',
+    undo: 'Undo',
+    reset: 'Reset',
+    sandboxBtn: 'Sandbox',
+    help: 'Help',
+    uiGuideTitle: 'UI Layout Guide',
+    visitorsTitle: 'Total unique visitors',
+    githubTitle: 'View repository on GitHub',
+    support: 'Buy me a coffee',
+    supportTitle: 'Support the publisher',
+    learningGuide: 'Learning guide',
+    guideAlwaysOn:
+      'Always-on panel. In a level it shows concepts, field notes, and the solution checklist.',
+    startHere: 'Start here',
+    startHereItems: [
+      'Open **Levels** and begin with Basics → Echo Hello',
+      'Type `help ui` for a map of this page',
+      'Type `curriculum` for outcomes you will own',
+      'Type `help` for full list of CMD commands',
+    ],
+    sandboxTip: 'Sandbox tip',
+    sandboxTipItems: [
+      'Board: Virtual C:\\ filesystem tree',
+      'Terminal: Tab completes word-by-word; ↑/↓ is history',
+      'Progress saves in this browser (cookie + localStorage)',
+    ],
+    noActiveLevel: 'No active level',
+    noActiveLevelDetail: 'levels → pick a challenge to see the checklist here',
+    guideFlashNote:
+      'Toolbar <code>Guide</code> flashes this panel. It stays open at full page height.',
+    youAreLearning: 'Learning Outcomes',
+    fieldNotesTitle: 'Field Notes',
+    typeNextTitle: 'Recommended Command',
+    remainingLabel: 'Try:',
+    wrongCommandNote: 'Incorrect commands do not forfeit your solved steps.',
+    allSolutionMet: '✓ Goal criteria reached! Press Enter to finalize or move on.',
+    bestSoFar: (best, par) => `Best: ${best} cmds (ideal par: ${par})`,
+    idealSolution: (par) => `Par: ${par} command${par === 1 ? '' : 's'}`,
+    levelSolvedBanner: 'LEVEL CLEARED',
+    partyMode: 'Press Next Level to proceed, or share your golf score!',
+    cheers: [
+      'Outstanding command execution!',
+      'Clean syntax, zero friction.',
+      'Command line mastery in progress.',
+      'Flawless execution!',
+    ],
+    shareTitle: 'Share your achievement',
+    copyPost: 'Copy Post',
+    close: 'Close',
+    back: 'Back',
+    next: 'Next',
+    startLevel: 'Start Level',
+    runSolution: 'Run Solution',
+    cancel: 'Cancel',
+    pickChallenge: 'Choose a level sequence. Command golf scores are saved automatically.',
+    howToRead: 'Legend & Score Card',
+    difficultyLegend: 'Difficulty rating (1-5 dots)',
+    idealLegend: 'Target command golf par',
+    solvedLegend: 'Solved badge with best command count',
+    difficultyOf: (n) => `Difficulty: ${n}/5`,
+    solvedLabel: 'Solved',
+    levelsTitle: 'Command Sequences',
+    aboutTitle: 'About learn-cmd',
+    levelMeta: (id, name) => `Level: ${name || id} [${id}]`,
+    titleLine: (id, name, par) => `${id} · ${name} · expected ${par} commands`,
+    sandboxTitle: 'sandbox mode',
+    unknownLevel: (id) => `Unknown level id: ${id}`,
+    noHintSandbox: 'You are in Sandbox mode. Type `levels` to choose a challenge.',
+    noGoalSandbox: 'Sandbox mode has no goal. Type `levels` to load a lesson.',
+    allStepsMet: 'All goal criteria already reached.',
+    guideAlwaysRight: 'Guide dock is docked on the right.',
+    nothingToUndo: 'Nothing to undo.',
+    undoMeta: 'Last state change reverted.',
+    noSolutionSandbox: 'Solutions are only available inside levels.',
+    solutionTitle: (id) => `Solution for ${id}`,
+    solutionCommands: 'Reference command sequence:',
+    solutionWarn: 'Running the solution will mark this level as "solution seen" in golf tracking.',
+    resetLevel: (id) => `Level ${id} reset to starting filesystem.`,
+    resetSandbox: 'Sandbox filesystem reset.',
+    lessonReplayed: 'Lesson dialog reopened.',
+    helpLinks: 'levels · sandbox · hint · steps · goal · solution · undo · reset · quiz · share',
+    curriculumOutcomes: 'Curriculum & Learning Outcomes:',
+    progressLevels: (solved, total) => `Progress: ${solved}/${total} levels completed (${total ? Math.round((solved / total) * 100) : 0}%).`,
+    quizHeader: (num, total) => `Question ${num} of ${total}`,
+    quizAnswerUsage: 'Answer with: quiz A, quiz B, or quiz C',
+    correct: '✓ Correct! Well done.',
+    quizFinished: 'Quiz finished! You have completed all questions.',
+    linkedin: 'LinkedIn',
+    xTwitter: 'X / Twitter',
+    facebook: 'Facebook',
+    copyOk: 'Copied to clipboard!',
+    copyFail: 'Could not copy automatically.',
+    shareCopied: 'Share text copied to clipboard.',
+    shareOpened: 'Share window opened.',
+    baskInIt: 'Stay Here',
+    celebrateOn: (nextId) => `Next Level: ${nextId}`,
+    browseLevels: 'Browse Levels',
+    levelComplete: 'Level Cleared!',
+    termAriaLabel: 'Command line prompt',
+  },
+  fa: {
+    language: 'زبان',
+    menuLabel: 'منوی ناوبری',
+    levels: 'مراحل',
+    lesson: 'درس',
+    lessonTitle: 'نمایش مجدد دیالوگ درس',
+    guide: 'راهنما',
+    hint: 'نکته',
+    solution: 'پاسخ',
+    undo: 'لغو',
+    reset: 'شروع مجدد',
+    sandboxBtn: 'آزاد',
+    help: 'راهنما',
+    uiGuideTitle: 'راهنمای رابط کاربری',
+    visitorsTitle: 'مجموع بازدیدکنندگان یکتا',
+    githubTitle: 'مشاهده مخزن در گیت‌هاب',
+    support: 'حمایت',
+    supportTitle: 'حمایت مالی (خرید قهوه)',
+    learningGuide: 'راهنمای یادگیری',
+    guideAlwaysOn: 'داک راهنما و بررسی وضعیت اهداف',
+    startHere: 'از اینجا شروع کن',
+    startHereItems: [
+      'با تایپ `levels` یا کلیک روی **مراحل** در نوار بالا، درس‌ها را به ترتیب پیش ببر.',
+      'با دستور `dir` محتویات پوشه کاری فعلی را بررسی کن.',
+      'با دستور `cd Documents` وارد پوشه‌ها شو.',
+      'برای مشاهده فهرست کامل دستورات ویندوز، `help` را تایپ کن.',
+    ],
+    sandboxTip: 'دستورات حالت آزاد',
+    sandboxTipItems: [
+      '`undo` — لغو آخرین تغییر در دیسک مجازی',
+      '`reset` — بازگردانی دیسک به حالت اولیه',
+      '`tree /f` — ترسیم نموداری ساختار پوشه‌ها و فایل‌ها',
+      '`help ui` — نمایش راهنما و هایلایت اجزای صفحه',
+    ],
+    noActiveLevel: 'حالت آزاد (Sandbox)',
+    noActiveLevelDetail: 'کاوش آزادانه در شل ویندوز. برای شروع چالش دستور `levels` را بزنید.',
+    guideFlashNote: 'برای بررسی هدف مرحله در ترمینال `steps` یا `goal` را تایپ کن.',
+    youAreLearning: 'سرفصل‌های آموزشی این مرحله',
+    fieldNotesTitle: 'نکات عملیاتی',
+    typeNextTitle: 'دستور پیشنهادی بعدی',
+    remainingLabel: 'امتحان کن:',
+    wrongCommandNote: 'دستور اشتباه زحمات قبلی شما را از بین نمی‌برد.',
+    allSolutionMet: '✓ هدف مرحله محقق شد! برای رفتن به مرحله بعد کلید را بزنید.',
+    bestSoFar: (best, par) => `بهترین رکورد: ${best} دستور (هدف: ${par})`,
+    idealSolution: (par) => `هدف گلف: ${par} دستور`,
+    levelSolvedBanner: 'مرحله حل شد',
+    partyMode: 'دکمه Next Level را برای ادامه بزن یا امتیازت را به اشتراک بگذار!',
+    cheers: [
+      'اجرای دقیق و بی‌نقص!',
+      'عالی بود؛ دستورات کاملاً تمیز اجرا شدند.',
+      'مهارت خط فرمان در حال رشد است.',
+      'تسلط کامل بر سینتکس ویندوز!',
+    ],
+    shareTitle: 'اشتراک‌گذاری پیشرفت',
+    copyPost: 'کپی متن',
+    close: 'بستن',
+    back: 'قبلی',
+    next: 'بعدی',
+    startLevel: 'شروع مرحله',
+    runSolution: 'اجرای راه‌حل',
+    cancel: 'انصراف',
+    pickChallenge: 'سری مراحل را انتخاب کنید. رکوردهای Command Golf به‌طور خودکار ذخیره می‌شوند.',
+    howToRead: 'راهنمای علائم و نشان‌ها',
+    difficultyLegend: 'درجه سختی (۱ تا ۵ نقطه)',
+    idealLegend: 'تعداد دستور ایده‌آل (Par)',
+    solvedLegend: 'نشان حل‌شده به همراه بهترین رکورد',
+    difficultyOf: (n) => `سختی: ${n} از ۵`,
+    solvedLabel: 'حل شد',
+    levelsTitle: 'توالی مراحل آموزشی',
+    aboutTitle: 'درباره learn-cmd',
+    levelMeta: (id, name) => `مرحله: ${name || id} [${id}]`,
+    titleLine: (id, name, par) => `${name} (${id}) · هدف ${par}`,
+    sandboxTitle: 'محیط آزاد — درایو مجازی :C',
+    unknownLevel: (id) => `مرحله‌ای با این شناسه یافت نشد: ${id}`,
+    noHintSandbox: 'در حالت آزاد هستید. با دستور `levels` یک مرحله را انتخاب کنید.',
+    noGoalSandbox: 'حالت آزاد هدفی ندارد. برای ورود به درس دستور `levels` را بزنید.',
+    allStepsMet: 'تمامی مراحل با موفقیت انجام شده‌اند.',
+    guideAlwaysRight: 'پنل راهنما در ستون سمت راست قرار دارد.',
+    nothingToUndo: 'تغییری برای لغو وجود ندارد.',
+    undoMeta: 'آخرین وضعیت فایل‌سیستم بازیابی شد.',
+    noSolutionSandbox: 'مشاهده راه‌حل فقط در داخل مراحل فعال است.',
+    solutionTitle: (id) => `راه‌حل مرحله ${id}`,
+    solutionCommands: 'توالی دستورات مرجع:',
+    solutionWarn: 'اجرای خودکار راه‌حل، این مرحله را به عنوان "راه‌حل دیده‌شده" ثبت می‌کند.',
+    resetLevel: (id) => `مرحله ${id} به حالت اولیه برگشت.`,
+    resetSandbox: 'سیستم‌فایل مجازی ریست شد.',
+    lessonReplayed: 'دیالوگ درس مجدداً باز شد.',
+    helpLinks: 'levels · sandbox · hint · steps · goal · solution · undo · reset · quiz · share',
+    curriculumOutcomes: 'سرفصل‌ها و مهارت‌های کسب‌شده:',
+    progressLevels: (solved, total) => `پیشرفت: ${solved} از ${total} مرحله حل شد (${total ? Math.round((solved / total) * 100) : 0}٪).`,
+    quizHeader: (num, total) => `سوال ${num} از ${total}`,
+    quizAnswerUsage: 'پاسخ با دستور: quiz A یا quiz B یا quiz C',
+    correct: '✓ کاملاً درست است.',
+    quizFinished: 'آزمون به پایان رسید! تمامی سوالات را پاسخ دادید.',
+    linkedin: 'لینکدین',
+    xTwitter: 'توییتر / X',
+    facebook: 'فیس‌بوک',
+    copyOk: 'متن در کلیپ‌بورد کپی شد!',
+    copyFail: 'کپی خودکار با خطا مواجه شد.',
+    shareCopied: 'متن پست در حافظه کپی شد.',
+    shareOpened: 'پنجره اشتراک‌گذاری باز شد.',
+    baskInIt: 'همینجا بمان',
+    celebrateOn: (nextId) => `مرحله بعدی: ${nextId}`,
+    browseLevels: 'مشاهده مراحل',
+    levelComplete: 'تبریک! مرحله تکمیل شد',
+    termAriaLabel: 'خط فرمان شبیه‌ساز',
+  },
+  de: {
+    language: 'Sprache',
+    menuLabel: 'Navigationsmenü',
+    levels: 'Level',
+    lesson: 'Lektion',
+    lessonTitle: 'Lektionsdialog wiederholen',
+    guide: 'Anleitung',
+    hint: 'Tipp',
+    solution: 'Lösung',
+    undo: 'Rückgängig',
+    reset: 'Neustart',
+    sandboxBtn: 'Sandbox',
+    help: 'Hilfe',
+    uiGuideTitle: 'Oberflächen-Handbuch',
+    visitorsTitle: 'Gesamte eindeutige Besucher',
+    githubTitle: 'Repository auf GitHub ansehen',
+    support: 'Unterstützen',
+    supportTitle: 'Kaffee spendieren',
+    learningGuide: 'Lernleitfaden',
+    guideAlwaysOn: 'Interaktiver Leitfaden & Zielanzeige',
+    startHere: 'Hier beginnen',
+    startHereItems: [
+      'Tippe `levels` oder klicke oben auf **Level**, um strukturierte Übungen zu starten.',
+      'Tippe `dir`, um das aktuelle Arbeitsverzeichnis aufzulisten.',
+      'Tippe `cd Documents`, um in Ordner zu wechseln.',
+      'Tippe `help` für alle verfügbaren Windows-Befehle.',
+    ],
+    sandboxTip: 'Sandbox-Befehle',
+    sandboxTipItems: [
+      '`undo` — letzten Befehl rückgängig machen',
+      '`reset` — virtuelles Dateisystem zurücksetzen',
+      '`tree /f` — visuelle Verzeichnisstruktur anzeigen',
+      '`help ui` — Oberflächen-Bereiche hervorheben',
+    ],
+    noActiveLevel: 'Sandbox-Modus',
+    noActiveLevelDetail: 'Freies Erkunden. Tippe `levels`, um eine Übung zu wählen.',
+    guideFlashNote: 'Tippe `steps` oder `goal` im Terminal, um das Ziel zu sehen.',
+    youAreLearning: 'Lernziele dieses Levels',
+    fieldNotesTitle: 'Praxishinweise',
+    typeNextTitle: 'Empfohlener nächster Befehl',
+    remainingLabel: 'Versuche:',
+    wrongCommandNote: 'Fehlerhafte Befehle zerstören deinen Fortschritt nicht.',
+    allSolutionMet: '✓ Zielkriterien erreicht!',
+    bestSoFar: (best, par) => `Rekord: ${best} Befehle (Ziel: ${par})`,
+    idealSolution: (par) => `Par: ${par} Befehl(e)`,
+    levelSolvedBanner: 'LEVEL GELÖST',
+    partyMode: 'Klicke auf Nächstes Level oder teile deinen Erfolg!',
+    cheers: [
+      'Hervorragend ausgeführt!',
+      'Saubere Syntax, direkter Treffer.',
+      'Befehlszeilen-Kompetenz wächst stetig.',
+      'Perfekte Ausführung!',
+    ],
+    shareTitle: 'Erfolg teilen',
+    copyPost: 'Kopieren',
+    close: 'Schließen',
+    back: 'Zurück',
+    next: 'Weiter',
+    startLevel: 'Level starten',
+    runSolution: 'Lösung ausführen',
+    cancel: 'Abbrechen',
+    pickChallenge: 'Wähle eine Sequenz. Rekorde werden automatisch im Browser gespeichert.',
+    howToRead: 'Legende',
+    difficultyLegend: 'Schwierigkeit (1 bis 5 Punkte)',
+    idealLegend: 'Ideale Befehlsanzahl (Par)',
+    solvedLegend: 'Abzeichen für gelöste Level',
+    difficultyOf: (n) => `Schwierigkeit: ${n}/5`,
+    solvedLabel: 'Gelöst',
+    levelsTitle: 'Lernsequenzen',
+    aboutTitle: 'Über learn-cmd',
+    levelMeta: (id, name) => `Level: ${name || id} [${id}]`,
+    titleLine: (id, name, par) => `${name} (${id}) · Par ${par}`,
+    sandboxTitle: 'Freie Sandbox — Virtuelles Laufwerk C:',
+    unknownLevel: (id) => `Unbekannte Level-ID: ${id}`,
+    noHintSandbox: 'Du bist im Sandbox-Modus. Tippe `levels`, um zu starten.',
+    noGoalSandbox: 'Die Sandbox hat kein festes Ziel. Starte mit `levels`.',
+    allStepsMet: 'Alle Kriterien bereits erfüllt.',
+    guideAlwaysRight: 'Das Anleitungs-Dock befindet sich auf der rechten Seite.',
+    nothingToUndo: 'Nichts zum Rückgängigmachen vorhanden.',
+    undoMeta: 'Vorheriger Zustand wiederhergestellt.',
+    noSolutionSandbox: 'Lösungen sind nur innerhalb von Leveln verfügbar.',
+    solutionTitle: (id) => `Lösung für ${id}`,
+    solutionCommands: 'Referenz-Befehle:',
+    solutionWarn: 'Das Ausführen der Lösung markiert das Level als "Lösung eingesehen".',
+    resetLevel: (id) => `Level ${id} wurde zurückgesetzt.`,
+    resetSandbox: 'Sandbox-Dateisystem zurückgesetzt.',
+    lessonReplayed: 'Lektionsdialog erneut geöffnet.',
+    helpLinks: 'levels · sandbox · hint · steps · goal · solution · undo · reset · quiz · share',
+    curriculumOutcomes: 'Lernplan & Lernergebnisse:',
+    progressLevels: (solved, total) => `Fortschritt: ${solved}/${total} Level abgeschlossen (${total ? Math.round((solved / total) * 100) : 0}%).`,
+    quizHeader: (num, total) => `Frage ${num} von ${total}`,
+    quizAnswerUsage: 'Antworte mit: quiz A, quiz B oder quiz C',
+    correct: '✓ Richtig!',
+    quizFinished: 'Quiz beendet! Alle Fragen wurden beantwortet.',
+    linkedin: 'LinkedIn',
+    xTwitter: 'X / Twitter',
+    facebook: 'Facebook',
+    copyOk: 'In die Zwischenablage kopiert!',
+    copyFail: 'Kopieren fehlgeschlagen.',
+    shareCopied: 'Text kopiert.',
+    shareOpened: 'Teilen-Fenster geöffnet.',
+    baskInIt: 'Hier bleiben',
+    celebrateOn: (nextId) => `Nächstes Level: ${nextId}`,
+    browseLevels: 'Level ansehen',
+    levelComplete: 'Glückwunsch! Level gemeistert',
+    termAriaLabel: 'Befehlseingabe',
+  },
+};
+
+export const QUIZ_ITEMS = {
+  en: [
+    {
+      q: 'Which switch makes `dir` display only bare file and directory names?',
+      a: ['/S', '/B', '/W'],
+      correct: 1,
+    },
+    {
+      q: 'Which operator appends text to an existing file instead of overwriting it?',
+      a: ['>', '>>', '|'],
+      correct: 1,
+    },
+    {
+      q: 'How do you remove a non-empty directory tree silently in Windows CMD?',
+      a: ['del /all', 'rd /s /q dirname', 'erase /force dirname'],
+      correct: 1,
+    },
+    {
+      q: 'What operator chains two commands so the second runs ONLY if the first succeeds?',
+      a: ['&', '&&', '||'],
+      correct: 1,
+    },
+    {
+      q: 'How do you refer to an environment variable named "PATH" in CMD?',
+      a: ['$PATH', '%PATH%', '{PATH}'],
+      correct: 1,
+    },
+  ],
+  fa: [
+    {
+      q: 'کدام سوییچ باعث می‌شود خروجی `dir` فقط شامل نام خالص فایل‌ها و پوشه‌ها باشد؟',
+      a: ['/S', '/B', '/W'],
+      correct: 1,
+    },
+    {
+      q: 'کدام عملگر متن را به انتهای یک فایل اضافه می‌کند (بدون پاک کردن محتوای قبلی)؟',
+      a: ['>', '>>', '|'],
+      correct: 1,
+    },
+    {
+      q: 'برای حذف کامل یک پوشه غیرخالی و زیرشاخه‌های آن بدون سوال تایید کدام صحیح است؟',
+      a: ['del /all', 'rd /s /q dirname', 'erase /force dirname'],
+      correct: 1,
+    },
+    {
+      q: 'کدام عملگر دو دستور را متصل می‌کند تا دستور دوم تنها در صورت موفقیت اولی اجرا شود؟',
+      a: ['&', '&&', '||'],
+      correct: 1,
+    },
+    {
+      q: 'نحوه ارجاع به متغیر محیطی PATH در محیط CMD چگونه است؟',
+      a: ['$PATH', '%PATH%', '{PATH}'],
+      correct: 1,
+    },
+  ],
+  de: [
+    {
+      q: 'Welcher Schalter sorgt bei `dir` für eine reine Namensauflistung ohne Metadaten?',
+      a: ['/S', '/B', '/W'],
+      correct: 1,
+    },
+    {
+      q: 'Welcher Operator hängt Text an eine Datei an, anstatt sie zu überschreiben?',
+      a: ['>', '>>', '|'],
+      correct: 1,
+    },
+    {
+      q: 'Wie löscht man ein nicht-leeres Verzeichnis samt Unterordnern ohne Nachfrage?',
+      a: ['del /all', 'rd /s /q dirname', 'erase /force dirname'],
+      correct: 1,
+    },
+    {
+      q: 'Welcher Operator führt den zweiten Befehl nur bei Erfolg des ersten aus?',
+      a: ['&', '&&', '||'],
+      correct: 1,
+    },
+    {
+      q: 'Wie greift man in der CMD auf die Umgebungsvariable PATH zu?',
+      a: ['$PATH', '%PATH%', '{PATH}'],
+      correct: 1,
+    },
+  ],
+};
+
+/**
+ * Return UI dictionary for current or specified locale.
+ *
+ * @param {'en' | 'fa' | 'de'} [loc]
+ * @returns {typeof UI_STRINGS.en}
+ */
+export function ui(loc) {
+  const code = loc || getLocale();
+  const base = UI_STRINGS.en;
+  const target = UI_STRINGS[code] || base;
+  return {
+    ...base,
+    ...target,
+    quiz: QUIZ_ITEMS[code] || QUIZ_ITEMS.en,
+  };
+}
+
+/**
+ * Localize a level definition for display in the right dock and UI dialogs.
+ *
+ * @param {import('./levels.js').Level} level
+ * @param {'en' | 'fa' | 'de'} [loc]
+ * @returns {import('./levels.js').Level & { objective: string, learning: string[], fieldNotes: string[] }}
+ */
+export function localizeLevel(level, loc) {
+  const code = loc || getLocale();
+  const name =
+    (level.name && (level.name[code] || level.name.en_US || Object.values(level.name)[0])) ||
+    level.id;
+  const hint =
+    (level.hint && (level.hint[code] || level.hint.en_US || Object.values(level.hint)[0])) || '';
+  const about =
+    (level.about && (level.about[code] || level.about.en_US || Object.values(level.about)[0])) || '';
+
+  /** @type {Record<string, { objective: string, learning: string[], fieldNotes: string[] }>} */
+  const metadata = {
+    'intro-echo': {
+      objective: 'Run `echo hello` to print your first greeting on the command line.',
+      learning: ['Understanding standard output', 'Basic command grammar in CMD', 'Echoing text'],
+      fieldNotes: ['`echo.` prints an empty blank line in real batch scripts.'],
+    },
+    'intro-dir': {
+      objective: 'Run `dir` to inspect directories, file sizes, and dates in your user folder.',
+      learning: ['Reading directory listings', 'Recognizing <DIR> tags', 'File byte sizes'],
+      fieldNotes: ['`dir /b` produces a bare listing without headers, great for piping.'],
+    },
+    'intro-cd': {
+      objective: 'Change your working directory into `Documents`.',
+      learning: ['Navigating folder hierarchies', 'Using relative and absolute paths', '`cd ..` back navigation'],
+      fieldNotes: ['`cd \\` jumps directly to the root of the current drive.'],
+    },
+    'intro-md': {
+      objective: 'Create a new directory named `projects`.',
+      learning: ['Creating directories with `md` or `mkdir`', 'Auto-creating nested parent folders'],
+      fieldNotes: ['`md a\\b\\c` creates all intermediate subdirectories in one shot.'],
+    },
+    'intro-files': {
+      objective: 'Create a file named `hello.txt` with content `hello world` using `>`.',
+      learning: ['Output redirection with `>`', 'Writing file streams without text editors'],
+      fieldNotes: ['`>` truncates existing content, while `>>` appends to the end.'],
+    },
+  };
+
+  const extra = metadata[level.id] || {
+    objective: about || hint || 'Reach the target filesystem state.',
+    learning: ['Windows CMD syntax', 'Command line filesystem navigation'],
+    fieldNotes: ['Use `hint` or `show solution` if you get stuck.'],
+  };
+
+  return {
+    ...level,
+    name: { [code]: name, en_US: level.name?.en_US || name },
+    hint: { [code]: hint, en_US: level.hint?.en_US || hint },
+    about: { [code]: about, en_US: level.about?.en_US || about },
+    objective: extra.objective,
+    learning: extra.learning,
+    fieldNotes: extra.fieldNotes,
+  };
+}
+

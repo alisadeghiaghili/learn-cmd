@@ -1,156 +1,48 @@
 /**
  * learn-cmd application shell.
  *
- * Wires the virtual filesystem, command executor, tree visualization,
- * terminal UI, and level dialogs together.
+ * Coordinates the virtual filesystem, CMD executor, live tree visualizer,
+ * terminal component, persistent progress, dock guide, and celebrations.
  */
 
 'use strict';
 
 import { VirtualFileSystem, defaultFsSpec, normalizePath } from './vfs.js';
-import { executeLine, detectMeta } from './shell.js';
-import { COMMANDS, lookupCommand, commandNames } from './commands.js';
-import { renderTree, diffNewPaths } from './tree.js';
+import { executeLine } from './shell.js';
 import {
   sequences,
   allLevels,
   getLevel,
-  locateLevel,
   nextLevel,
   prevLevel,
-  baseTree,
   registerCustomLevel,
   listCustomLevels,
   levelFromJson,
 } from './levels.js';
-import { getDialogFa } from './i18n.js';
+import { renderTree, diffNewPaths } from './tree.js';
+import { TerminalView } from './terminal.js';
+import { launchConfetti, playFanfare } from './confetti.js';
+import { loadProgress, saveProgress, summarizeCurriculum, resumeLine } from './progress.js';
+import { buildShareTargets, shareWithClipboard, COFFEE_BUTTON_HTML, REPO_URL } from './share.js';
+import { getVisitorCount } from './visitor-counter.js';
+import { formatUiHelpText, uiHelpModalHtml, startUiTour } from './ui-help.js';
+import { getLocale, setLocale, ui, localizeLevel, getDialogFa, LOCALES } from './i18n.js';
 
 /** @typedef {import('./levels.js').Level} Level */
 
 // ---------------------------------------------------------------------------
-// Tiny markdown renderer (headings, code, bold, italic, lists, tables, inline)
+// Markdown rendering helper
 // ---------------------------------------------------------------------------
 
-/**
- * @param {string} md
- * @returns {string}
- */
-function renderMarkdown(md) {
-  const lines = md.split('\n');
-  /** @type {string[]} */
-  const html = [];
-  let inCode = false;
-  let inList = false;
-  let inTable = false;
-  /** @type {string[]} */
-  let codeBuf = [];
-  /** @type {string[]} */
-  let tableBuf = [];
-
-  const flushList = () => {
-    if (inList) {
-      html.push('</ul>');
-      inList = false;
-    }
-  };
-  const flushTable = () => {
-    if (inTable) {
-      html.push(renderTable(tableBuf));
-      tableBuf = [];
-      inTable = false;
-    }
-  };
-
-  for (const line of lines) {
-    if (line.trim().startsWith('```')) {
-      if (inCode) {
-        html.push(`<pre><code>${escapeHtml(codeBuf.join('\n'))}</code></pre>`);
-        codeBuf = [];
-        inCode = false;
-      } else {
-        flushList();
-        flushTable();
-        inCode = true;
-      }
-      continue;
-    }
-    if (inCode) {
-      codeBuf.push(line);
-      continue;
-    }
-
-    if (line.trim().startsWith('|') && line.includes('|', 1)) {
-      flushList();
-      inTable = true;
-      tableBuf.push(line);
-      continue;
-    }
-    flushTable();
-
-    if (/^\s*[-*]\s+/.test(line)) {
-      if (!inList) {
-        html.push('<ul>');
-        inList = true;
-      }
-      html.push(`<li>${inline(line.replace(/^\s*[-*]\s+/, ''))}</li>`);
-      continue;
-    }
-    flushList();
-
-    if (line.startsWith('### ')) {
-      html.push(`<h4>${inline(line.slice(4))}</h4>`);
-    } else if (line.startsWith('## ')) {
-      html.push(`<h3>${inline(line.slice(3))}</h3>`);
-    } else if (line.startsWith('# ')) {
-      html.push(`<h2>${inline(line.slice(2))}</h2>`);
-    } else if (line.trim() === '') {
-      html.push('<p class="md-gap"></p>');
-    } else {
-      html.push(`<p>${inline(line)}</p>`);
-    }
-  }
-  if (inCode && codeBuf.length) {
-    html.push(`<pre><code>${escapeHtml(codeBuf.join('\n'))}</code></pre>`);
-  }
-  flushList();
-  flushTable();
-  return html.join('\n');
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-/**
- * @param {string[]} rows
- * @returns {string}
- */
-function renderTable(rows) {
-  const parsed = rows
-    .filter((r) => !/^\s*\|[\s:-|]+\|\s*$/.test(r))
-    .map((r) =>
-      r
-        .trim()
-        .replace(/^\|/, '')
-        .replace(/\|$/, '')
-        .split('|')
-        .map((c) => c.trim())
-    );
-  if (!parsed.length) return '';
-  const [head, ...body] = parsed;
-  let html = '<table class="md-table"><thead><tr>';
-  for (const h of head) html += `<th>${inline(h)}</th>`;
-  html += '</tr></thead><tbody>';
-  for (const row of body) {
-    html += '<tr>';
-    for (const cell of row) html += `<td>${inline(cell)}</td>`;
-    html += '</tr>';
-  }
-  html += '</tbody></table>';
-  return html;
-}
-
-/**
- * @param {string} text
- * @returns {string}
- */
-function inline(text) {
+function renderInline(text) {
   let s = escapeHtml(text);
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -162,1080 +54,1102 @@ function inline(text) {
   return s;
 }
 
-/**
- * @param {string} s
- * @returns {string}
- */
-function escapeHtml(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+function renderMarkdown(md) {
+  const lines = String(md || '').split('\n');
+  const html = [];
+  let inCode = false;
+  let inList = false;
+  const codeBuf = [];
 
-// ---------------------------------------------------------------------------
-// Progress store
-// ---------------------------------------------------------------------------
-
-const STORAGE_KEY = 'learn-cmd.progress.v1';
-
-/**
- * @returns {Record<string, { best: number | null, solved: boolean, sawSolution: boolean }>}
- */
-function loadProgress() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-/**
- * @param {Record<string, unknown>} progress
- */
-function saveProgress(progress) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch {
-    /* ignore quota errors */
-  }
-}
-
-// ---------------------------------------------------------------------------
-// App state
-// ---------------------------------------------------------------------------
-
-/** @type {VirtualFileSystem} */
-let fs = new VirtualFileSystem(defaultFsSpec());
-/** @type {{ spec: Record<string, unknown>, cwd: string, env: Map<string, string> }[]} */
-let undoStack = [];
-/** @type {Level | null} */
-let currentLevel = null;
-/** @type {'sandbox' | 'level'} */
-let mode = 'sandbox';
-/** @type {number} */
-let commandCount = 0;
-/** @type {string[]} */
-let history = [];
-/** @type {number} */
-let historyIndex = -1;
-/** @type {Set<string>} */
-let flashPaths = new Set();
-/** @type {Record<string, { best: number | null, solved: boolean, sawSolution: boolean }>} */
-let progress = loadProgress();
-/** @type {boolean} */
-let dialogOpen = false;
-
-// DOM refs
-const el = {
-  tree: /** @type {HTMLElement} */ (document.getElementById('fs-tree')),
-  term: /** @type {HTMLElement} */ (document.getElementById('term-body')),
-  input: /** @type {HTMLInputElement} */ (document.getElementById('term-input')),
-  prompt: /** @type {HTMLElement} */ (document.getElementById('term-prompt')),
-  modeLabel: /** @type {HTMLElement} */ (document.getElementById('mode-label')),
-  levelTitle: /** @type {HTMLElement} */ (document.getElementById('level-title')),
-  golf: /** @type {HTMLElement} */ (document.getElementById('golf-score')),
-  golfPar: /** @type {HTMLElement} */ (document.getElementById('golf-par')),
-  goalPanel: /** @type {HTMLElement} */ (document.getElementById('goal-panel')),
-  modal: /** @type {HTMLElement} */ (document.getElementById('modal')),
-  modalBody: /** @type {HTMLElement} */ (document.getElementById('modal-body')),
-  toast: /** @type {HTMLElement} */ (document.getElementById('toast')),
-  btnLevels: /** @type {HTMLButtonElement} */ (document.getElementById('btn-levels')),
-  btnSandbox: /** @type {HTMLButtonElement} */ (document.getElementById('btn-sandbox')),
-  btnUndo: /** @type {HTMLButtonElement} */ (document.getElementById('btn-undo')),
-  btnReset: /** @type {HTMLButtonElement} */ (document.getElementById('btn-reset')),
-  btnHint: /** @type {HTMLButtonElement} */ (document.getElementById('btn-hint')),
-  btnShare: /** @type {HTMLButtonElement} */ (document.getElementById('btn-share')),
-  langToggle: /** @type {HTMLButtonElement} */ (document.getElementById('lang-toggle')),
-};
-
-// ---------------------------------------------------------------------------
-// Rendering helpers
-// ---------------------------------------------------------------------------
-
-function refreshTree() {
-  renderTree(el.tree, fs, { flashPaths });
-  flashPaths = new Set();
-}
-
-function refreshPrompt() {
-  el.prompt.textContent = `${fs.cwd}>`;
-  el.input.setAttribute('aria-label', `Command input at ${fs.cwd}`);
-}
-
-function refreshHud() {
-  el.modeLabel.textContent = mode === 'level' && currentLevel ? 'LEVEL' : 'SANDBOX';
-  el.levelTitle.textContent =
-    mode === 'level' && currentLevel ? pick(currentLevel.name) : 'Free exploration';
-  el.golf.textContent = String(commandCount);
-  el.golfPar.textContent =
-    mode === 'level' && currentLevel && currentLevel.par != null ? String(currentLevel.par) : '—';
-  el.btnUndo.disabled = undoStack.length === 0;
-  updateGoalPanel();
-}
-
-/**
- * @param {Record<string, string> | undefined} map
- * @returns {string}
- */
-function pick(map) {
-  if (!map) return '';
-  const lang = currentLang();
-  return map[lang] || map.en_US || Object.values(map)[0] || '';
-}
-
-/** @type {'en_US' | 'fa'} */
-let appLang = 'fa';
-
-/**
- * @returns {'en_US' | 'fa'}
- */
-function currentLang() {
-  return appLang;
-}
-
-/**
- * @param {'en_US' | 'fa'} lang
- */
-function setLang(lang) {
-  appLang = lang;
-  try {
-    localStorage.setItem('learn-cmd.lang', lang);
-  } catch {
-    /* ignore */
-  }
-  const chip = document.getElementById('lang-toggle');
-  if (chip) chip.textContent = lang === 'fa' ? 'FA' : 'EN';
-  refreshHud();
-}
-
-function updateGoalPanel() {
-  if (mode !== 'level' || !currentLevel) {
-    el.goalPanel.innerHTML = `<div class="goal-sandbox">Sandbox — type <code>levels</code> to start a lesson, <code>help</code> for commands.</div>`;
-    return;
-  }
-  const diff = fs.diffGoalWithCommands(
-    currentLevel.goalFS,
-    currentLevel.goalCwd,
-    currentLevel.goalCommands || null,
-    history
-  );
-  const prog = progress[currentLevel.id];
-  const rows = [];
-  rows.push(`<div class="goal-title">Goal</div>`);
-  rows.push(`<div class="goal-hint">${inline(pick(currentLevel.hint) || '')}</div>`);
-  if (diff.ok) {
-    rows.push(`<div class="goal-ok">✓ Goal state reached</div>`);
-  } else {
-    if (diff.missing.length) {
-      rows.push(
-        `<div class="goal-miss">Missing: ${diff.missing
-          .slice(0, 6)
-          .map((m) => `<code>${escapeHtml(m)}</code>`)
-          .join(', ')}</div>`
-      );
+  const flushList = () => {
+    if (inList) {
+      html.push('</ul>');
+      inList = false;
     }
-    if (diff.extra.length) {
-      rows.push(
-        `<div class="goal-extra">Extra: ${diff.extra
-          .slice(0, 6)
-          .map((m) => `<code>${escapeHtml(m)}</code>`)
-          .join(', ')}</div>`
-      );
-    }
-    if (diff.cwdMismatch && currentLevel.goalCwd) {
-      rows.push(
-        `<div class="goal-miss">cwd should be <code>${escapeHtml(currentLevel.goalCwd)}</code></div>`
-      );
-    }
-    if (diff.missingCommands && diff.missingCommands.length) {
-      rows.push(
-        `<div class="goal-miss">Run: ${diff.missingCommands
-          .map((m) => `<code>${escapeHtml(m)}</code>`)
-          .join(' or ')}</div>`
-      );
-    }
-  }
-  if (prog && prog.best != null) {
-    rows.push(
-      `<div class="goal-best">Best: ${prog.best} command${prog.best === 1 ? '' : 's'}${
-        prog.sawSolution ? ' (solution seen)' : ''
-      }</div>`
-    );
-  }
-  el.goalPanel.innerHTML = rows.join('');
-}
+  };
 
-/**
- * @param {string} text
- * @param {'out' | 'in' | 'err' | 'sys'} [kind]
- */
-function print(text, kind = 'out') {
-  const lines = text.split('\n');
   for (const line of lines) {
-    const div = document.createElement('div');
-    div.className = 'term-line term-' + kind;
-    div.textContent = line;
-    el.term.appendChild(div);
-  }
-  el.term.scrollTop = el.term.scrollHeight;
-}
-
-/**
- * @param {string} promptText
- * @param {string} command
- */
-function printPromptLine(promptText, command) {
-  const div = document.createElement('div');
-  div.className = 'term-line term-in';
-  div.innerHTML = `<span class="term-prompt">${escapeHtml(promptText)}</span><span class="term-cmd">${escapeHtml(command)}</span>`;
-  el.term.appendChild(div);
-  el.term.scrollTop = el.term.scrollHeight;
-}
-
-/**
- * @param {string} message
- */
-function toast(message) {
-  el.toast.textContent = message;
-  el.toast.classList.add('show');
-  setTimeout(() => el.toast.classList.remove('show'), 2200);
-}
-
-// ---------------------------------------------------------------------------
-// Command execution entry
-// ---------------------------------------------------------------------------
-
-/**
- * @param {string} raw
- * @param {{ silent?: boolean, count?: boolean }} [opts]
- */
-function runCommand(raw, opts = {}) {
-  const line = raw.trim();
-  if (!line) return;
-
-  if (!opts.silent) {
-    printPromptLine(fs.cwd + '>', line);
-  }
-  if (!opts.count === false || opts.count) {
-    /* handled below */
-  }
-  if (opts.count !== false) {
-    commandCount += 1;
-    history.push(line);
-    historyIndex = history.length;
-  }
-
-  const before = fs.snapshot();
-  const beforeSpec = fs.serialize();
-
-  // Meta commands first
-  const meta = detectMeta(line);
-  if (meta) {
-    handleMeta(meta, line);
-    refreshHud();
-    refreshTree();
-    return;
-  }
-
-  const result = executeLine(line, { fs });
-  for (const outLine of result.lines) {
-    if (outLine === '\x0CLS') {
-      el.term.innerHTML = '';
+    if (line.trim().startsWith('```')) {
+      if (inCode) {
+        html.push(`<pre><code>${escapeHtml(codeBuf.join('\n'))}</code></pre>`);
+        codeBuf.length = 0;
+        inCode = false;
+      } else {
+        flushList();
+        inCode = true;
+      }
       continue;
     }
-    print(outLine, outLine.startsWith('ERROR:') ? 'err' : 'out');
-  }
+    if (inCode) {
+      codeBuf.push(line);
+      continue;
+    }
 
-  // Only push undo if something changed
-  const afterSpec = fs.serialize();
-  if (JSON.stringify(beforeSpec) !== JSON.stringify(afterSpec) || before.cwd !== fs.cwd) {
-    undoStack.push(before);
-    if (undoStack.length > 50) undoStack.shift();
-  }
-
-  flashPaths = diffNewPaths(beforeSpec, afterSpec);
-  refreshTree();
-  refreshPrompt();
-  refreshHud();
-  checkGoal();
-}
-
-
-
-/**
- * @param {{ name: string, args: string[] }} meta
- * @param {string} line
- */
-function handleMeta(meta, line) {
-  switch (meta.name) {
-    case 'levels':
-      openLevelsDialog();
-      break;
-    case 'level': {
-      const id = meta.args[0];
-      if (!id) {
-        print('Usage: level <id>', 'err');
-        break;
+    if (/^\s*[-*]\s+/.test(line)) {
+      if (!inList) {
+        html.push('<ul>');
+        inList = true;
       }
-      startLevel(id);
-      break;
+      html.push(`<li>${renderInline(line.replace(/^\s*[-*]\s+/, ''))}</li>`);
+      continue;
     }
-    case 'sandbox':
-      enterSandbox();
-      break;
-    case 'undo':
-      doUndo();
-      break;
-    case 'reset':
-      doReset();
-      break;
-    case 'hint':
-      if (currentLevel) {
-        print(pick(currentLevel.hint), 'sys');
-      } else {
-        print('No active level. Type `levels` to choose one.', 'sys');
+    flushList();
+
+    if (line.startsWith('### ')) {
+      html.push(`<h4>${renderInline(line.slice(4))}</h4>`);
+    } else if (line.startsWith('## ')) {
+      html.push(`<h3>${renderInline(line.slice(3))}</h3>`);
+    } else if (line.startsWith('# ')) {
+      html.push(`<h2>${renderInline(line.slice(2))}</h2>`);
+    } else if (line.trim() === '') {
+      html.push('<p class="md-gap"></p>');
+    } else {
+      html.push(`<p>${renderInline(line)}</p>`);
+    }
+  }
+  if (inCode && codeBuf.length) {
+    html.push(`<pre><code>${escapeHtml(codeBuf.join('\n'))}</code></pre>`);
+  }
+  flushList();
+  return html.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// App Controller
+// ---------------------------------------------------------------------------
+
+class App {
+  constructor() {
+    this.fs = new VirtualFileSystem(defaultFsSpec());
+    /** @type {Level | null} */
+    this.level = null;
+    /** @type {'sandbox' | 'level'} */
+    this.mode = 'sandbox';
+    this.startSnapshot = this.fs.snapshot();
+    this.golf = [];
+    this.undoStack = [];
+    this.flashPaths = new Set();
+    this.progress = loadProgress();
+    this.solvedFlash = false;
+    this.cachedVisitorCount = null;
+    this.quizIndex = 0;
+
+    // DOM references
+    this.treeEl = document.getElementById('fs-tree');
+    this.dockEl = document.getElementById('dock');
+    this.titleEl = document.getElementById('level-title');
+    this.modalEl = document.getElementById('modal');
+    this.modalContentEl = document.getElementById('modal-body') || document.getElementById('modal-content');
+    this.toastEl = document.getElementById('toast');
+    this.visitorStatEl = document.getElementById('visitor-stat');
+    this.visitorCountEl = document.getElementById('visitor-count');
+    this.navDrawerEl = document.getElementById('nav-drawer');
+    this.navToggleEl = document.querySelector('[data-action="nav-toggle"]');
+    this.langBtnEl = document.querySelector('[data-action="lang-toggle"]');
+    this.langDropdownEl = document.getElementById('lang-dropdown');
+
+    const terminalContainer = document.getElementById('terminal');
+    this.terminal = new TerminalView(terminalContainer, (cmd) => this.handleCommand(cmd));
+
+    this.bindEvents();
+    this.initVisitorCounter();
+    this.boot();
+  }
+
+  bindEvents() {
+    // Toolbar buttons
+    document.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const action = btn.getAttribute('data-action');
+        if (action === 'nav-toggle') {
+          this.toggleNav();
+          return;
+        }
+        if (action === 'lang-toggle') {
+          this.toggleLang();
+          return;
+        }
+        this.closeNav();
+        this.closeLang();
+
+        if (action === 'levels') this.openLevelsDialog();
+        else if (action === 'lesson') this.replayLesson();
+        else if (action === 'goal') this.focusGuide();
+        else if (action === 'hint') this.showHint();
+        else if (action === 'solution') this.showSolution();
+        else if (action === 'undo') this.doUndo();
+        else if (action === 'reset') this.doReset();
+        else if (action === 'sandbox') this.enterSandbox();
+        else if (action === 'help') this.openUiHelp(true);
+      });
+    });
+
+    // Language options
+    document.querySelectorAll('[data-lang]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const loc = btn.getAttribute('data-lang');
+        if (loc) {
+          setLocale(loc);
+          this.closeLang();
+          this.remountAfterLocale();
+        }
+      });
+    });
+
+    // Modal background click
+    // Modal background click
+    this.modalEl.addEventListener('click', (e) => {
+      if (e.target === this.modalEl) {
+        this.closeModal();
       }
-      break;
-    case 'solution':
-    case 'show':
-      if (meta.name === 'show' && meta.args[0] && meta.args[0].toLowerCase() !== 'solution') {
-        print('Usage: show solution', 'err');
-        break;
+    });
+
+    // Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (this.modalEl.classList.contains('open')) {
+          this.closeModal();
+        }
+        this.closeNav();
+        this.closeLang();
       }
-      showSolution();
-      break;
-    case 'goal':
-      if (currentLevel) {
-        print(JSON.stringify(currentLevel.goalFS, null, 2), 'sys');
-        if (currentLevel.goalCwd) print('cwd: ' + currentLevel.goalCwd, 'sys');
-      } else {
-        print('No active level.', 'sys');
+    });
+
+    // Outside clicks close menus
+    document.addEventListener('click', (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      if (!target.closest('.lang-menu')) {
+        this.closeLang();
       }
-      break;
-    case 'next': {
-      const n = currentLevel && nextLevel(currentLevel.id);
-      if (n) startLevel(n.id);
-      else print('No next level.', 'sys');
-      break;
-    }
-    case 'prev': {
-      const p = currentLevel && prevLevel(currentLevel.id);
-      if (p) startLevel(p.id);
-      else print('No previous level.', 'sys');
-      break;
-    }
-    case 'progress':
-    case 'golf':
-      printGolfBoard();
-      break;
-    case 'share':
-      sharePermalink();
-      break;
-    case 'build':
-      openLevelBuilder();
-      break;
-    case 'import': {
-      const rest = meta.args.slice();
-      if (rest[0] && rest[0].toLowerCase() === 'level') rest.shift();
-      openLevelImporter(rest.join(' '));
-      break;
-    }
-    default:
-      print(`Unknown meta command: ${line}`, 'err');
-  }
-}
-
-function doUndo() {
-  if (!undoStack.length) {
-    print('Nothing to undo.', 'sys');
-    return;
-  }
-  const snap = undoStack.pop();
-  fs.restore(snap);
-  commandCount = Math.max(0, commandCount - 1);
-  print('Undo complete.', 'sys');
-  refreshTree();
-  refreshPrompt();
-  refreshHud();
-  checkGoal();
-}
-
-function doReset() {
-  if (mode === 'level' && currentLevel) {
-    loadLevelState(currentLevel);
-    print('Level reset.', 'sys');
-  } else {
-    fs = new VirtualFileSystem(defaultFsSpec());
-    undoStack = [];
-    commandCount = 0;
-    print('Sandbox reset.', 'sys');
-  }
-  refreshTree();
-  refreshPrompt();
-  refreshHud();
-}
-
-function showSolution() {
-  if (!currentLevel) {
-    print('No active level.', 'sys');
-    return;
-  }
-  const prog = progress[currentLevel.id] || { best: null, solved: false, sawSolution: false };
-  prog.sawSolution = true;
-  progress[currentLevel.id] = prog;
-  saveProgress(progress);
-  print('Solution: ' + currentLevel.solutionCommand, 'sys');
-  print('(Run it yourself to keep a clean score — golf is marked as "solution seen".)', 'sys');
-}
-
-function printGolfBoard() {
-  print('Command golf — solved levels', 'sys');
-  const levels = allLevels();
-  let any = false;
-  for (const level of levels) {
-    const prog = progress[level.id];
-    if (!prog || !prog.solved) continue;
-    any = true;
-    const par = level.par != null ? level.par : '—';
-    print(
-      `  ${level.id.padEnd(18)} best=${prog.best}  par=${par}${prog.sawSolution ? '  (solution seen)' : ''}`,
-      'out'
-    );
-  }
-  if (!any) print('  (none yet)', 'sys');
-}
-
-function sharePermalink() {
-  const url = new URL(window.location.href);
-  url.search = '';
-  if (currentLevel) url.searchParams.set('level', currentLevel.id);
-  print(url.toString(), 'sys');
-  try {
-    navigator.clipboard.writeText(url.toString());
-    toast('Permalink copied');
-  } catch {
-    /* ignore */
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Level builder / import
-// ---------------------------------------------------------------------------
-
-/** @type {{ startFS: Record<string, unknown> | null, goalFS: Record<string, unknown> | null, startCwd: string, goalCwd: string }} */
-const builderState = {
-  startFS: null,
-  goalFS: null,
-  startCwd: 'C:\\Users\\student',
-  goalCwd: 'C:\\Users\\student',
-};
-
-function openLevelBuilder() {
-  openModal(`
-    <div class="levels-dialog builder">
-      <h2>Build level</h2>
-      <p class="levels-sub">
-        Arrange the sandbox filesystem for the <strong>start</strong> state, capture it,
-        rearrange it to the <strong>goal</strong>, capture that too, then export JSON.
-        <code>import level</code> plays it back.
-      </p>
-
-      <label class="field-label">Name (en_US)</label>
-      <input id="bl-name" class="text-input" type="text" placeholder="My challenge" value="" />
-
-      <label class="field-label">Hint (en_US)</label>
-      <input id="bl-hint" class="text-input" type="text" placeholder="Try md + echo redirection" />
-
-      <label class="field-label">About</label>
-      <input id="bl-about" class="text-input" type="text" placeholder="What this level teaches" />
-
-      <label class="field-label">Solution command</label>
-      <input id="bl-solution" class="text-input" type="text" placeholder="md app &amp;&amp; echo hi&gt;app\\a.txt" />
-
-      <label class="field-label">Par (command golf)</label>
-      <input id="bl-par" class="text-input" type="number" min="1" value="2" />
-
-      <label class="field-label">Intro markdown</label>
-      <textarea id="bl-intro" class="text-area" rows="4" placeholder="## Task&#10;Create app\\a.txt containing hi"></textarea>
-
-      <div class="builder-captures">
-        <div class="capture-card">
-          <div class="capture-title">Start tree</div>
-          <div id="bl-start-status" class="capture-status">not captured</div>
-          <button class="btn" type="button" data-action="bl-capture-start">Capture current FS</button>
-        </div>
-        <div class="capture-card">
-          <div class="capture-title">Goal tree</div>
-          <div id="bl-goal-status" class="capture-status">not captured</div>
-          <button class="btn" type="button" data-action="bl-capture-goal">Capture current FS</button>
-        </div>
-      </div>
-      <p class="builder-cwd">Builder cwd recorded as <code id="bl-cwd">${escapeHtml(fs.cwd)}</code></p>
-
-      <label class="field-label">Export JSON</label>
-      <textarea id="bl-json" class="text-area" rows="8" readonly placeholder="Capture start + goal, then click Export"></textarea>
-
-      <div class="modal-actions">
-        <button class="btn primary" type="button" data-action="bl-export">Export JSON</button>
-        <button class="btn" type="button" data-action="bl-save">Save &amp; play</button>
-        <button class="btn" type="button" data-action="bl-copy">Copy JSON</button>
-        <button class="btn ghost" type="button" data-action="close-modal">Close</button>
-      </div>
-    </div>
-  `);
-}
-
-/**
- * Collect builder form values into a level JSON object.
- *
- * @returns {Record<string, unknown>}
- */
-function collectBuilderLevel() {
-  const name = /** @type {HTMLInputElement} */ (document.getElementById('bl-name')).value.trim();
-  const hint = /** @type {HTMLInputElement} */ (document.getElementById('bl-hint')).value.trim();
-  const about = /** @type {HTMLInputElement} */ (document.getElementById('bl-about')).value.trim();
-  const solution = /** @type {HTMLInputElement} */ (
-    document.getElementById('bl-solution')
-  ).value.trim();
-  const par = Number(/** @type {HTMLInputElement} */ (document.getElementById('bl-par')).value) || 1;
-  const intro = /** @type {HTMLTextAreaElement} */ (document.getElementById('bl-intro')).value;
-
-  if (!name) throw new Error('Name is required.');
-  if (!builderState.startFS) throw new Error('Capture the start tree first.');
-  if (!builderState.goalFS) throw new Error('Capture the goal tree first.');
-
-  return {
-    id: 'custom-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-    name: { en_US: name },
-    hint: { en_US: hint || 'Inspect the goal and use CMD commands.' },
-    about: { en_US: about || 'Custom level' },
-    intro: intro || 'Reach the goal tree.',
-    startFS: builderState.startFS,
-    goalFS: builderState.goalFS,
-    startCwd: builderState.startCwd,
-    goalCwd: builderState.goalCwd,
-    solutionCommand: solution,
-    par,
-  };
-}
-
-function openLevelImporter(prefill) {
-  openModal(`
-    <div class="levels-dialog">
-      <h2>Import level</h2>
-      <p class="levels-sub">Paste a level JSON blob exported by <code>build level</code>.</p>
-      <label class="field-label">Level JSON</label>
-      <textarea id="li-json" class="text-area" rows="12" placeholder='{"id":"...","name":{"en_US":"..."},"startFS":{},"goalFS":{}}'></textarea>
-      <div id="li-error" class="goal-miss" hidden></div>
-      <div class="modal-actions">
-        <button class="btn primary" type="button" data-action="li-load">Load level</button>
-        <button class="btn ghost" type="button" data-action="close-modal">Close</button>
-      </div>
-    </div>
-  `);
-  if (prefill) {
-    /** @type {HTMLTextAreaElement} */ (document.getElementById('li-json')).value = prefill;
-  }
-}
-
-/**
- * @param {string} jsonText
- */
-function loadImportedLevel(jsonText) {
-  const errBox = document.getElementById('li-error');
-  try {
-    const raw = JSON.parse(jsonText);
-    const level = levelFromJson(raw);
-    registerCustomLevel(level);
-    closeModal();
-    startLevel(level.id);
-    print(`Imported custom level: ${pick(level.name)}`, 'sys');
-  } catch (err) {
-    if (errBox) {
-      errBox.hidden = false;
-      errBox.textContent = err && err.message ? err.message : String(err);
-    }
-  }
-}
-
-function checkGoal() {
-  if (mode !== 'level' || !currentLevel) return;
-  const diff = fs.diffGoalWithCommands(
-    currentLevel.goalFS,
-    currentLevel.goalCwd,
-    currentLevel.goalCommands || null,
-    history
-  );
-  if (!diff.ok) return;
-
-  const id = currentLevel.id;
-  const prev = progress[id] || { best: null, solved: false, sawSolution: false };
-  prev.solved = true;
-  if (prev.best == null || commandCount < prev.best) prev.best = commandCount;
-  progress[id] = prev;
-  saveProgress(progress);
-
-  const par = currentLevel.par;
-  const scoreMsg =
-    par != null
-      ? commandCount <= par
-        ? `Par met! ${commandCount}/${par} commands.`
-        : `Solved in ${commandCount} commands (par ${par}).`
-      : `Solved in ${commandCount} commands.`;
-
-  openModal(`
-    <div class="win-card">
-      <div class="win-badge">LEVEL SOLVED</div>
-      <h2>${escapeHtml(pick(currentLevel.name))}</h2>
-      <p class="win-score">${escapeHtml(scoreMsg)}</p>
-      ${prev.sawSolution ? '<p class="win-note">Solution was revealed for this level.</p>' : ''}
-      <div class="win-actions">
-        <button class="btn primary" data-action="next-level">Next level</button>
-        <button class="btn" data-action="replay">Replay</button>
-        <button class="btn ghost" data-action="close-modal">Stay here</button>
-      </div>
-    </div>
-  `);
-}
-
-// ---------------------------------------------------------------------------
-// Modes
-// ---------------------------------------------------------------------------
-
-/**
- * @param {Level} level
- */
-function loadLevelState(level) {
-  fs = new VirtualFileSystem(level.startFS);
-  if (level.startCwd) fs.cwd = normalizePath(level.startCwd, fs.cwd);
-  fs.ensureDefaultProfile();
-  undoStack = [];
-  commandCount = 0;
-}
-
-/**
- * @param {string} id
- */
-function startLevel(id) {
-  const level = getLevel(id);
-  if (!level) {
-    print(`Unknown level id: ${id}`, 'err');
-    return;
-  }
-  currentLevel = level;
-  mode = 'level';
-  loadLevelState(level);
-  refreshTree();
-  refreshPrompt();
-  refreshHud();
-  print(`Loaded level: ${pick(level.name)}`, 'sys');
-  print(`Type 'hint' if stuck, 'show solution' to peek, 'reset' to start over.`, 'sys');
-  openLevelDialog(level);
-  const url = new URL(window.location.href);
-  url.searchParams.set('level', id);
-  window.history.replaceState({}, '', url.toString());
-}
-
-function enterSandbox() {
-  currentLevel = null;
-  mode = 'sandbox';
-  fs = new VirtualFileSystem(defaultFsSpec());
-  undoStack = [];
-  commandCount = 0;
-  refreshTree();
-  refreshPrompt();
-  refreshHud();
-  print('Sandbox mode. Type `levels` for lessons, `help` for commands.', 'sys');
-  const url = new URL(window.location.href);
-  url.searchParams.delete('level');
-  window.history.replaceState({}, '', url.toString());
-}
-
-// ---------------------------------------------------------------------------
-// Dialogs
-// ---------------------------------------------------------------------------
-
-/**
- * @param {string} html
- */
-function openModal(html) {
-  el.modalBody.innerHTML = html;
-  el.modal.classList.add('open');
-  dialogOpen = true;
-}
-
-function closeModal() {
-  el.modal.classList.remove('open');
-  el.modalBody.innerHTML = '';
-  dialogOpen = false;
-  el.input.focus();
-}
-
-function openLevelsDialog() {
-  /** @type {{ key: string, title: string, about: string, levels: Level[] }[]} */
-  const groups = Object.entries(sequences).map(([key, seq]) => ({
-    key,
-    title: pick(seq.displayName),
-    about: pick(seq.about),
-    levels: seq.levels,
-  }));
-  const customs = listCustomLevels();
-  if (customs.length) {
-    groups.push({
-      key: 'custom',
-      title: 'Custom',
-      about: 'Levels you built or imported in this session.',
-      levels: customs,
+      if (!target.closest('.nav-drawer') && !target.closest('[data-action="nav-toggle"]')) {
+        this.closeNav();
+      }
     });
   }
 
-  let html = `<div class="levels-dialog">
-    <h2>Levels</h2>
-    <p class="levels-sub">Command golf: try to match par. Progress is saved in your browser.</p>
-    <div class="levels-tabs">`;
-  groups.forEach((g, i) => {
-    html += `<button class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${escapeHtml(g.key)}">${escapeHtml(
-      g.title
-    )}</button>`;
-  });
-  html += `</div>`;
+  toggleNav() {
+    if (!this.navDrawerEl) return;
+    const open = this.navDrawerEl.classList.toggle('is-open');
+    this.navDrawerEl.hidden = !open;
+    if (this.navToggleEl) this.navToggleEl.setAttribute('aria-expanded', String(open));
+    if (open) this.closeLang();
+  }
 
-  groups.forEach((g, i) => {
-    html += `<div class="tab-panel ${i === 0 ? 'active' : ''}" data-panel="${escapeHtml(g.key)}">
-      <p class="seq-about">${escapeHtml(g.about)}</p>
-      <ul class="level-list">`;
-    for (const level of g.levels) {
-      const prog = progress[level.id];
-      const status = prog && prog.solved ? 'solved' : 'open';
-      const best = prog && prog.best != null ? String(prog.best) : '—';
-      const par = level.par != null ? String(level.par) : '—';
-      const label = g.key === 'custom' ? 'custom' : `best ${best} / par ${par}`;
-      html += `<li class="level-item ${status}" data-level="${escapeHtml(level.id)}">
-        <span class="level-name">${escapeHtml(pick(level.name))}</span>
-        <span class="level-golf">${label}</span>
-      </li>`;
+  closeNav() {
+    if (!this.navDrawerEl) return;
+    this.navDrawerEl.classList.remove('is-open');
+    this.navDrawerEl.hidden = true;
+    if (this.navToggleEl) this.navToggleEl.setAttribute('aria-expanded', 'false');
+  }
+
+  toggleLang() {
+    if (!this.langDropdownEl) return;
+    const open = this.langDropdownEl.classList.toggle('is-open');
+    this.langDropdownEl.hidden = !open;
+    if (this.langBtnEl) this.langBtnEl.setAttribute('aria-expanded', String(open));
+    if (open) this.closeNav();
+  }
+
+  closeLang() {
+    if (!this.langDropdownEl) return;
+    this.langDropdownEl.classList.remove('is-open');
+    this.langDropdownEl.hidden = true;
+    if (this.langBtnEl) this.langBtnEl.setAttribute('aria-expanded', 'false');
+  }
+
+  renderToolbar() {
+    const u = ui();
+    const current = getLocale();
+
+    if (this.langBtnEl) {
+      this.langBtnEl.setAttribute('aria-label', u.language || 'Language');
     }
-    html += `</ul></div>`;
-  });
+    const label = document.querySelector('[data-lang-label]');
+    if (label) {
+      label.textContent = current.toUpperCase();
+    }
+    document.querySelectorAll('[data-lang]').forEach((btn) => {
+      const loc = btn.getAttribute('data-lang');
+      const isCurrent = loc === current;
+      btn.classList.toggle('on', isCurrent);
+      btn.setAttribute('aria-checked', String(isCurrent));
+    });
 
-  html += `<div class="modal-actions">
-    <button class="btn ghost" data-action="close-modal">Close</button>
-    <button class="btn" data-action="open-builder">Build level</button>
-    <button class="btn" data-action="open-importer">Import level</button>
-  </div></div>`;
-  openModal(html);
-}
+    if (this.navToggleEl) {
+      this.navToggleEl.setAttribute('aria-label', u.menuLabel || 'Navigation menu');
+    }
 
-/**
- * @param {Level} level
- */
-function openLevelDialog(level) {
-  const lang = currentLang();
-  const dialog =
-    (level.startDialog && level.startDialog[lang]) ||
-    (lang === 'fa' ? getDialogFa(level.id) : null) ||
-    (level.startDialog && level.startDialog.en_US) ||
-    getDialogFa(level.id) ||
-    null;
-  if (!dialog || !dialog.childViews || !dialog.childViews.length) return;
-  let html = `<div class="lesson-dialog">`;
-  dialog.childViews.forEach((view, index) => {
-    if (view.type === 'ModalAlert') {
-      const md = (view.options.markdowns || []).join('\n');
-      html += `<section class="lesson-card">${renderMarkdown(md)}</section>`;
-    } else if (view.type === 'CmdDemonstrationView') {
-      const before = (view.options.beforeMarkdowns || []).join('\n');
-      const after = (view.options.afterMarkdowns || []).join('\n');
-      html += `<section class="lesson-card demo-card">
-        ${renderMarkdown(before)}
-        <div class="demo-run">
-          <code class="demo-cmd">${escapeHtml(view.options.command || '')}</code>
-          <button class="btn primary" data-action="run-demo" data-cmd="${escapeHtml(
-            view.options.command || ''
-          )}" data-pre="${escapeHtml(view.options.beforeCommand || '')}" data-demo="${index}">Run</button>
+    const actionConfig = {
+      levels: { text: u.levels },
+      lesson: { text: u.lesson, title: u.lessonTitle },
+      goal: { text: u.guide },
+      hint: { text: u.hint },
+      solution: { text: u.solution },
+      undo: { text: u.undo },
+      reset: { text: u.reset },
+      sandbox: { text: u.sandboxBtn },
+      help: { text: '?', title: u.uiGuideTitle, ariaLabel: u.help },
+    };
+
+    for (const [action, cfg] of Object.entries(actionConfig)) {
+      const btn = document.querySelector(`[data-action="${action}"]`);
+      if (btn) {
+        btn.textContent = cfg.text;
+        if (cfg.title) btn.title = cfg.title;
+        if (cfg.ariaLabel) btn.setAttribute('aria-label', cfg.ariaLabel);
+      }
+    }
+
+    if (this.visitorStatEl) {
+      this.visitorStatEl.title = u.visitorsTitle || 'Total unique visitors';
+    }
+
+    const ghLink = document.querySelector('.tb-link.gh');
+    if (ghLink) {
+      ghLink.title = u.githubTitle || 'View repository on GitHub';
+    }
+
+    const supportLink = document.querySelector('.tb-link.support');
+    if (supportLink) {
+      supportLink.textContent = u.support || 'Support';
+      supportLink.title = u.supportTitle || 'Buy me a coffee';
+    }
+
+    if (this.dockEl) {
+      this.dockEl.setAttribute('aria-label', u.learningGuide || 'Learning Guide');
+    }
+
+    this.renderLevelTitle();
+  }
+
+  renderLevelTitle() {
+    if (!this.titleEl) return;
+    const u = ui();
+    if (this.mode === 'level' && this.level) {
+      const loc = getLocale();
+      const name =
+        (this.level.name && (this.level.name[loc] || this.level.name.en_US || Object.values(this.level.name)[0])) ||
+        this.level.id;
+      const par = this.level.par || 1;
+      this.titleEl.textContent = typeof u.titleLine === 'function'
+        ? u.titleLine(this.level.id, name, par)
+        : `${name} (${this.level.id}) · Par ${par}`;
+    } else {
+      this.titleEl.textContent = u.sandboxTitle || 'Free Sandbox — Virtual Drive C:';
+    }
+  }
+
+  remountAfterLocale() {
+    const loc = getLocale();
+    this.renderToolbar();
+
+    if (this.level) {
+      this.level = localizeLevel(this.level, loc);
+    }
+    this.renderAll();
+    this.renderVisitorBadge();
+    this.terminal.push(
+      'meta',
+      loc === 'fa'
+        ? 'زبان به فارسی تغییر کرد.'
+        : loc === 'de'
+          ? 'Sprache auf Deutsch geändert.'
+          : 'Language set to English.'
+    );
+  }
+
+  async initVisitorCounter() {
+    this.cachedVisitorCount = 5;
+    this.renderVisitorBadge();
+    const count = await getVisitorCount();
+    if (count !== null) {
+      this.cachedVisitorCount = count;
+      this.renderVisitorBadge();
+    }
+  }
+
+  renderVisitorBadge() {
+    if (this.cachedVisitorCount === null || !this.visitorStatEl || !this.visitorCountEl) return;
+    this.visitorStatEl.title = ui().visitorsTitle || 'Total unique visitors';
+    this.visitorCountEl.textContent = this.cachedVisitorCount.toLocaleString('en-US');
+    this.visitorStatEl.hidden = false;
+  }
+
+  focusGuide() {
+    this.dockEl.classList.remove('dock-pulse');
+    void this.dockEl.offsetWidth;
+    this.dockEl.classList.add('dock-pulse');
+    this.dockEl.scrollTop = 0;
+  }
+
+  toast(message) {
+    this.toastEl.textContent = message;
+    this.toastEl.classList.add('show');
+    setTimeout(() => this.toastEl.classList.remove('show'), 2400);
+  }
+
+  openModal(html) {
+    this.modalContentEl.innerHTML = html;
+    this.modalEl.classList.add('open');
+  }
+
+  closeModal() {
+    this.modalEl.classList.remove('open');
+    this.modalContentEl.innerHTML = '';
+    this.terminal.focus();
+  }
+
+  renderAll() {
+    renderTree(this.treeEl, this.fs, { flashPaths: this.flashPaths });
+    this.flashPaths = new Set();
+    this.terminal.setPrompt(`${this.fs.cwd}>`);
+
+    this.renderLevelTitle();
+
+    this.renderDock();
+    this.syncHints();
+  }
+
+  syncHints() {
+    if (this.mode !== 'level' || !this.level) {
+      this.terminal.setHint('dir');
+      this.terminal.setExtraCompletions([]);
+      return;
+    }
+
+    const sol = this.level.solutionCommand;
+    this.terminal.setHint(sol, ui().hint);
+    this.terminal.setExtraCompletions([sol]);
+  }
+
+  renderDock() {
+    const u = ui();
+    const loc = getLocale();
+
+    if (this.mode !== 'level' || !this.level) {
+      this.dockEl.innerHTML = `
+        <h2>${escapeHtml(u.learningGuide)}</h2>
+        <p class="objective">${escapeHtml(u.guideAlwaysOn)}</p>
+        <div class="learning-box">
+          <div class="next-title">${escapeHtml(u.startHere)}</div>
+          <ul>
+            ${u.startHereItems.map((item) => `<li>${renderMarkdown(item)}</li>`).join('')}
+          </ul>
         </div>
-        <div class="demo-after" id="demo-after-${index}" hidden>${renderMarkdown(after)}</div>
-      </section>`;
-    }
-  });
-  html += `<div class="modal-actions">
-    <button class="btn primary" data-action="close-modal">Start</button>
-    <button class="btn" data-action="show-solution">Show solution</button>
-    <button class="btn ghost" data-action="close-modal">Close</button>
-  </div></div>`;
-  openModal(html);
-}
-
-// ---------------------------------------------------------------------------
-// Events
-// ---------------------------------------------------------------------------
-
-el.input.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    const value = el.input.value;
-    el.input.value = '';
-    runCommand(value);
-    return;
-  }
-  if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    if (historyIndex > 0) {
-      historyIndex -= 1;
-      el.input.value = history[historyIndex] || '';
-    }
-    return;
-  }
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    if (historyIndex < history.length) {
-      historyIndex += 1;
-      el.input.value = history[historyIndex] || '';
-    }
-    return;
-  }
-  if (event.key === 'c' && event.ctrlKey) {
-    printPromptLine(fs.cwd + '>', el.input.value + '^C');
-    el.input.value = '';
-  }
-});
-
-el.btnLevels.addEventListener('click', () => openLevelsDialog());
-el.btnSandbox.addEventListener('click', () => enterSandbox());
-el.btnUndo.addEventListener('click', () => doUndo());
-el.btnReset.addEventListener('click', () => doReset());
-el.btnHint.addEventListener('click', () => {
-  if (currentLevel) print(pick(currentLevel.hint), 'sys');
-  else print('No active level.', 'sys');
-});
-el.btnShare.addEventListener('click', () => sharePermalink());
-el.langToggle.addEventListener('click', () => {
-  setLang(currentLang() === 'fa' ? 'en_US' : 'fa');
-  print(currentLang() === 'fa' ? 'زبان: فارسی' : 'Language: English', 'sys');
-});
-
-el.modal.addEventListener('click', (event) => {
-  const target = /** @type {HTMLElement} */ (event.target);
-  if (target === el.modal) {
-    closeModal();
-    return;
-  }
-  const btn = target.closest('[data-action]');
-  if (!btn) {
-    const tab = target.closest('[data-tab]');
-    if (tab) {
-      const key = tab.getAttribute('data-tab');
-      el.modalBody.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-      el.modalBody.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-      tab.classList.add('active');
-      const panel = el.modalBody.querySelector(`[data-panel="${key}"]`);
-      if (panel) panel.classList.add('active');
-    }
-    const levelItem = target.closest('[data-level]');
-    if (levelItem) {
-      const id = levelItem.getAttribute('data-level');
-      closeModal();
-      startLevel(id);
-    }
-    return;
-  }
-  const action = btn.getAttribute('data-action');
-  if (action === 'close-modal') {
-    closeModal();
-  } else if (action === 'next-level') {
-    const n = currentLevel && nextLevel(currentLevel.id);
-    closeModal();
-    if (n) startLevel(n.id);
-    else {
-      toast('That was the last level');
-      enterSandbox();
-    }
-  } else if (action === 'replay') {
-    if (currentLevel) {
-      loadLevelState(currentLevel);
-      refreshTree();
-      refreshPrompt();
-      refreshHud();
-    }
-    closeModal();
-  } else if (action === 'show-solution') {
-    showSolution();
-  } else if (action === 'run-demo') {
-    const cmd = btn.getAttribute('data-cmd') || '';
-    const pre = btn.getAttribute('data-pre') || '';
-    const demoId = btn.getAttribute('data-demo');
-    // Run demo on a clone so the learner's state is untouched
-    const clone = fs.clone();
-    const ctx = { fs: clone, _dirStack: [] };
-    if (pre) {
-      try {
-        executeLine(pre, ctx);
-      } catch {
-        /* demo setup best-effort */
-      }
-    }
-    try {
-      const result = executeLine(cmd, ctx);
-      for (const line of result.lines) {
-        if (line !== '\x0CLS') print(line, 'out');
-      }
-    } catch (err) {
-      print('ERROR: ' + (err && err.message ? err.message : String(err)), 'err');
-    }
-    if (demoId != null) {
-      const after = document.getElementById('demo-after-' + demoId);
-      if (after) {
-        after.hidden = false;
-        btn.disabled = true;
-        btn.textContent = 'Done';
-      }
-    }
-  } else if (action === 'bl-capture-start') {
-    builderState.startFS = fs.serialize();
-    builderState.startCwd = fs.cwd;
-    const st = document.getElementById('bl-start-status');
-    if (st) {
-      st.textContent = `captured (${Object.keys(builderState.startFS).length} top-level entries)`;
-      st.classList.add('ok');
-    }
-    const cwdEl = document.getElementById('bl-cwd');
-    if (cwdEl) cwdEl.textContent = fs.cwd;
-    toast('Start tree captured');
-  } else if (action === 'bl-capture-goal') {
-    builderState.goalFS = fs.serialize();
-    builderState.goalCwd = fs.cwd;
-    const st = document.getElementById('bl-goal-status');
-    if (st) {
-      st.textContent = `captured (${Object.keys(builderState.goalFS).length} top-level entries)`;
-      st.classList.add('ok');
-    }
-    toast('Goal tree captured');
-  } else if (action === 'bl-export') {
-    try {
-      const levelJson = collectBuilderLevel();
-      /** @type {HTMLTextAreaElement} */ (document.getElementById('bl-json')).value =
-        JSON.stringify(levelJson, null, 2);
-      toast('JSON ready');
-    } catch (err) {
-      toast(err && err.message ? err.message : 'Export failed');
-    }
-  } else if (action === 'bl-copy') {
-    try {
-      const levelJson = collectBuilderLevel();
-      const text = JSON.stringify(levelJson, null, 2);
-      /** @type {HTMLTextAreaElement} */ (document.getElementById('bl-json')).value = text;
-      navigator.clipboard.writeText(text);
-      toast('Copied to clipboard');
-    } catch (err) {
-      toast(err && err.message ? err.message : 'Copy failed');
-    }
-  } else if (action === 'bl-save') {
-    try {
-      const levelJson = collectBuilderLevel();
-      const level = levelFromJson(levelJson);
-      registerCustomLevel(level);
-      closeModal();
-      startLevel(level.id);
-    } catch (err) {
-      toast(err && err.message ? err.message : 'Save failed');
-    }
-  } else if (action === 'li-load') {
-    const text = /** @type {HTMLTextAreaElement} */ (document.getElementById('li-json')).value;
-    loadImportedLevel(text);
-  } else if (action === 'open-builder') {
-    openLevelBuilder();
-  } else if (action === 'open-importer') {
-    openLevelImporter('');
-  }
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && dialogOpen) {
-    closeModal();
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Boot
-// ---------------------------------------------------------------------------
-
-function boot() {
-  const params = new URLSearchParams(window.location.search);
-  const levelId = params.get('level');
-  const commands = params.get('command');
-
-  try {
-    const saved = localStorage.getItem('learn-cmd.lang');
-    if (saved === 'fa' || saved === 'en_US') appLang = saved;
-  } catch {
-    /* ignore */
-  }
-  if (el.langToggle) el.langToggle.textContent = currentLang() === 'fa' ? 'FA' : 'EN';
-
-  print('Microsoft Windows [Version 10.0.19045.4170]', 'sys');
-  print('(learn-cmd virtual machine)', 'sys');
-  print('', 'out');
-
-  if (levelId) {
-    startLevel(levelId);
-  } else if (params.has('NODEMO') || params.has('demo')) {
-    enterSandbox();
-  } else {
-    enterSandbox();
-    openModal(`
-      <div class="intro-card">
-        <h2><img class="intro-logo" src="assets/logo.svg" width="48" height="48" alt="" /> learn-cmd</h2>
-        <p>An interactive Windows CMD trainer — sandbox, live filesystem tree, and leveled challenges with command golf. Inspired by <em>learnGitBranching</em>.</p>
-        <ul class="intro-list">
-          <li><strong>Sandbox</strong> — free play with <code>undo</code> / <code>reset</code></li>
-          <li><strong>Levels</strong> — type <code>levels</code> or use the button</li>
-          <li><strong>Golf</strong> — solve in as few commands as par</li>
+        <div class="learning-box">
+          <div class="next-title">${escapeHtml(u.sandboxTip)}</div>
+          <ul>
+            ${u.sandboxTipItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+          </ul>
+        </div>
+        <ul class="goal-list">
+          <li class="met">
+            <div class="g-label">${escapeHtml(u.noActiveLevel)}</div>
+            <div class="g-detail">${escapeHtml(u.noActiveLevelDetail)}</div>
+          </li>
         </ul>
+        <div class="par-note">${u.guideFlashNote}</div>
+      `;
+      return;
+    }
+
+    const lvl = this.level;
+    const diff = this.fs.diffGoalWithCommands(
+      lvl.goalFS,
+      lvl.goalCwd,
+      lvl.goalCommands || null,
+      this.golf
+    );
+    const solved = diff.ok;
+    const prog = this.progress[lvl.id];
+    const golfNote =
+      prog?.best !== undefined
+        ? u.bestSoFar(prog.best, lvl.par || 1)
+        : u.idealSolution(lvl.par || 1);
+
+    const name = lvl.name[loc] || lvl.name.en_US || lvl.id;
+    const obj = lvl.objective || lvl.about[loc] || lvl.about.en_US || '';
+    const learning = lvl.learning || [];
+    const fieldNotes = lvl.fieldNotes || [];
+
+    const statusIcon = solved ? '✓' : '▶';
+    const nextBox = solved
+      ? `<div class="next-box met">${escapeHtml(u.allSolutionMet)}</div>`
+      : `<div class="next-box">
+          <div class="next-title">${escapeHtml(u.typeNextTitle)}</div>
+          <div class="next-row">
+            <span class="g-label">${escapeHtml(u.remainingLabel)}</span>
+            <code class="g-cmd">${escapeHtml(lvl.solutionCommand)}</code>
+          </div>
+          <div class="par-note">${escapeHtml(u.wrongCommandNote)}</div>
+        </div>`;
+
+    this.dockEl.innerHTML = `
+      <h2>${escapeHtml(name)}</h2>
+      <p class="objective">${escapeHtml(obj)}</p>
+      ${
+        learning.length
+          ? `<div class="learning-box">
+              <div class="next-title">${escapeHtml(u.youAreLearning)}</div>
+              <ul>${learning.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+            </div>`
+          : ''
+      }
+      ${
+        fieldNotes.length
+          ? `<div class="field-box">
+              <div class="next-title">${escapeHtml(u.fieldNotesTitle)}</div>
+              <ul>${fieldNotes.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+            </div>`
+          : ''
+      }
+      <div class="par-note">${escapeHtml(golfNote)}</div>
+      ${this.solvedFlash ? `<div class="next-box met">${escapeHtml(u.levelSolvedBanner)}</div>` : ''}
+      ${nextBox}
+      <ul class="goal-list">
+        <li class="${solved ? 'met' : 'current'}">
+          <div class="g-label">${statusIcon} <code>${escapeHtml(lvl.solutionCommand)}</code></div>
+          <div class="g-detail">${escapeHtml(diff.ok ? 'Criterion met' : 'Target state pending')}</div>
+        </li>
+      </ul>
+    `;
+  }
+
+  handleCommand(raw) {
+    const cmd = raw.trim();
+    if (!cmd) return;
+
+    this.terminal.push('cmd', `${this.fs.cwd}>${cmd}`);
+    const lower = cmd.toLowerCase();
+
+    // Meta routing
+    if (lower === 'levels' || lower === 'level') {
+      this.openLevelsDialog();
+      return;
+    }
+    if (lower.startsWith('level ')) {
+      const id = cmd.slice(6).trim();
+      this.startLevel(id);
+      return;
+    }
+    if (lower === 'sandbox') {
+      this.enterSandbox();
+      return;
+    }
+    if (lower === 'hint') {
+      this.showHint();
+      return;
+    }
+    if (lower === 'steps' || lower === 'goal' || lower === 'show goal') {
+      this.focusGuide();
+      this.terminal.push('meta', ui().guideAlwaysRight);
+      return;
+    }
+    if (lower === 'solution' || lower === 'show solution') {
+      this.showSolution();
+      return;
+    }
+    if (lower === 'reset') {
+      this.doReset();
+      return;
+    }
+    if (lower === 'undo') {
+      this.doUndo();
+      return;
+    }
+    if (lower === 'clear' || lower === 'cls') {
+      this.terminal.clear();
+      return;
+    }
+    if (lower === 'lesson' || lower === 'intro' || lower === 'about') {
+      this.replayLesson();
+      return;
+    }
+    if (lower === 'help' || lower === '?') {
+      this.terminal.push('out', formatUiHelpText(getLocale()));
+      this.terminal.push('meta', ui().helpLinks);
+      return;
+    }
+    if (lower === 'help ui' || lower === 'tour') {
+      this.openUiHelp(true);
+      return;
+    }
+    if (lower === 'curriculum' || lower === 'outcomes') {
+      const summary = summarizeCurriculum(this.progress, getLocale());
+      this.terminal.push('out', ui().curriculumOutcomes);
+      summary.learned.forEach((l, i) => {
+        this.terminal.push('out', `  ${i + 1}. ${l.name} (${l.id})`);
+      });
+      this.terminal.push('meta', ui().progressLevels(summary.solvedCount, summary.total));
+      return;
+    }
+    if (lower === 'quiz' || lower.startsWith('quiz ')) {
+      this.runQuiz(lower.slice(4).trim());
+      return;
+    }
+    if (lower === 'share') {
+      this.openShareDialog();
+      return;
+    }
+
+    // Standard CMD execution
+    const beforeSnap = this.fs.snapshot();
+    const beforeSpec = this.fs.serialize();
+
+    const result = executeLine(cmd, { fs: this.fs });
+    for (const line of result.lines) {
+      if (line === '\x0CLS') {
+        this.terminal.clear();
+        continue;
+      }
+      this.terminal.push(line.startsWith('ERROR:') ? 'err' : 'out', line);
+    }
+
+    const afterSpec = this.fs.serialize();
+    if (JSON.stringify(beforeSpec) !== JSON.stringify(afterSpec) || beforeSnap.cwd !== this.fs.cwd) {
+      this.undoStack.push(beforeSnap);
+      if (this.undoStack.length > 50) this.undoStack.shift();
+      this.golf.push(cmd);
+    }
+
+    this.flashPaths = diffNewPaths(beforeSpec, afterSpec);
+    this.renderAll();
+    this.checkGoal();
+  }
+
+  runQuiz(arg) {
+    const qList = ui().quiz;
+    if (!arg) {
+      this.quizIndex = 0;
+      this.askQuiz();
+      return;
+    }
+    const item = qList[this.quizIndex];
+    if (!item) return;
+
+    const pick = arg.toUpperCase();
+    const idx = pick === 'A' ? 0 : pick === 'B' ? 1 : pick === 'C' ? 2 : -1;
+    if (idx < 0) {
+      this.terminal.push('err', ui().quizAnswerUsage);
+      return;
+    }
+    if (idx === item.correct) {
+      this.terminal.push('ok', ui().correct);
+    } else {
+      this.terminal.push('err', `Incorrect. Best answer: ${['A', 'B', 'C'][item.correct]} — ${item.a[item.correct]}`);
+    }
+    this.quizIndex += 1;
+    this.askQuiz();
+  }
+
+  askQuiz() {
+    const qList = ui().quiz;
+    const item = qList[this.quizIndex];
+    if (!item) {
+      this.terminal.push('ok', ui().quizFinished);
+      this.quizIndex = 0;
+      return;
+    }
+    this.terminal.push('out', `${ui().quizHeader(this.quizIndex + 1, qList.length)}: ${item.q}`);
+    item.a.forEach((ans, i) => {
+      this.terminal.push('out', `  ${['A', 'B', 'C'][i]}) ${ans}`);
+    });
+    this.terminal.push('meta', ui().quizAnswerUsage);
+  }
+
+  checkGoal() {
+    if (this.mode !== 'level' || !this.level) return;
+    const diff = this.fs.diffGoalWithCommands(
+      this.level.goalFS,
+      this.level.goalCwd,
+      this.level.goalCommands || null,
+      this.golf
+    );
+    if (!diff.ok) return;
+
+    const id = this.level.id;
+    const count = this.golf.length;
+    const prev = this.progress[id] || { solved: false, best: count, sawSolution: false };
+    prev.solved = true;
+    prev.best = prev.best ? Math.min(prev.best, count) : count;
+    this.progress[id] = prev;
+    saveProgress(this.progress);
+
+    if (!this.solvedFlash) {
+      this.solvedFlash = true;
+      this.celebrateSolve();
+    }
+  }
+
+  celebrateSolve() {
+    launchConfetti(4500);
+    playFanfare();
+
+    const u = ui();
+    const lvl = this.level;
+    const nextLvl = nextLevel(lvl.id);
+    const curriculum = summarizeCurriculum(this.progress, getLocale());
+    const count = this.golf.length;
+    const par = lvl.par || 1;
+    const scoreMsg =
+      count <= par
+        ? `Par met! ${count}/${par} commands.`
+        : `Solved in ${count} commands (par was ${par}).`;
+
+    const share = buildShareTargets({
+      levelName: lvl.name[getLocale()] || lvl.name.en_US || lvl.id,
+      levelId: lvl.id,
+      commands: count,
+      par,
+      curriculum,
+    });
+
+    const cheers = u.cheers;
+    const cheer = cheers[Math.floor(Math.random() * cheers.length)];
+
+    const modalHtml = `
+      <div class="modal-celebrate" aria-live="polite">
+        <div class="celebrate">
+          <div class="celebrate-visual" aria-hidden="true">
+            <div class="celebrate-ring"></div>
+            <div class="celebrate-star">★</div>
+          </div>
+          <div class="celebrate-badge">${escapeHtml(u.levelSolvedBanner)}</div>
+          <h3 class="celebrate-title">${escapeHtml(lvl.name[getLocale()] || lvl.name.en_US)}</h3>
+          <p class="celebrate-sub"><code>${escapeHtml(lvl.id)}</code></p>
+          <p class="celebrate-cheer">${escapeHtml(cheer)}</p>
+          <div class="celebrate-stats">
+            <strong>${escapeHtml(scoreMsg)}</strong>
+          </div>
+          <div class="celebrate-progress">
+            <div class="prog-track">
+              <div class="prog-fill" style="width: ${curriculum.percent}%"></div>
+            </div>
+            <div class="par-note">${curriculum.solvedCount} / ${curriculum.total} levels solved (${curriculum.percent}%)</div>
+          </div>
+          <div class="share-block">
+            <div class="next-title">${escapeHtml(u.shareTitle)}</div>
+            <div class="share-row">
+              <button type="button" class="btn share-btn linkedin" data-share="linkedin">LinkedIn</button>
+              <button type="button" class="btn share-btn x" data-share="x">X / Twitter</button>
+              <button type="button" class="btn share-btn facebook" data-share="facebook">Facebook</button>
+              <button type="button" class="btn share-btn copy" data-share="copy">${escapeHtml(u.copyPost)}</button>
+            </div>
+            <div class="share-status" id="share-status" hidden></div>
+          </div>
+          <div class="modal-actions">
+            ${
+              nextLvl
+                ? `<button type="button" class="btn primary" data-action="next-level">${escapeHtml(u.celebrateOn(nextLvl.id))}</button>`
+                : `<button type="button" class="btn primary" data-action="open-levels">${escapeHtml(u.browseLevels)}</button>`
+            }
+            <button type="button" class="btn ghost" data-action="close-modal">${escapeHtml(u.baskInIt)}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.openModal(modalHtml);
+
+    this.modalContentEl.querySelectorAll('[data-share]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const kind = btn.getAttribute('data-share');
+        const res = await shareWithClipboard(kind, share);
+        const status = document.getElementById('share-status');
+        if (status) {
+          status.hidden = false;
+          status.textContent = res.copied ? u.copyOk : u.shareOpened;
+        }
+      });
+    });
+
+    const nextBtn = this.modalContentEl.querySelector('[data-action="next-level"]');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        this.closeModal();
+        if (nextLvl) this.startLevel(nextLvl.id);
+      });
+    }
+
+    const levelsBtn = this.modalContentEl.querySelector('[data-action="open-levels"]');
+    if (levelsBtn) {
+      levelsBtn.addEventListener('click', () => {
+        this.closeModal();
+        this.openLevelsDialog();
+      });
+    }
+
+    const closeBtn = this.modalContentEl.querySelector('[data-action="close-modal"]');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.closeModal());
+    }
+  }
+
+  showHint() {
+    if (this.mode === 'level' && this.level) {
+      const hint = this.level.hint[getLocale()] || this.level.hint.en_US;
+      this.terminal.push('out', hint);
+    } else {
+      this.terminal.push('meta', ui().noHintSandbox);
+    }
+  }
+
+  showSolution() {
+    if (this.mode !== 'level' || !this.level) {
+      this.terminal.push('meta', ui().noSolutionSandbox);
+      return;
+    }
+    const u = ui();
+    const lvl = this.level;
+    this.openModal(`
+      <div class="levels-dialog">
+        <h2>${escapeHtml(u.solutionTitle(lvl.id))}</h2>
+        <p>${escapeHtml(u.solutionCommands)}</p>
+        <pre><code>${escapeHtml(lvl.solutionCommand)}</code></pre>
+        <p class="par-note">${escapeHtml(u.solutionWarn)}</p>
         <div class="modal-actions">
-          <button class="btn primary" data-action="close-modal">Open sandbox</button>
-          <button class="btn" id="intro-levels">Browse levels</button>
+          <button type="button" class="btn primary" id="btn-run-sol">${escapeHtml(u.runSolution)}</button>
+          <button type="button" class="btn ghost" id="btn-cancel-sol">${escapeHtml(u.cancel)}</button>
         </div>
       </div>
     `);
-    const introLevels = document.getElementById('intro-levels');
-    if (introLevels) {
-      introLevels.addEventListener('click', () => {
-        closeModal();
-        openLevelsDialog();
+
+    document.getElementById('btn-run-sol')?.addEventListener('click', () => {
+      this.closeModal();
+      this.doReset();
+      const prog = this.progress[lvl.id] || { solved: false, best: null, sawSolution: true };
+      prog.sawSolution = true;
+      this.progress[lvl.id] = prog;
+      saveProgress(this.progress);
+      this.handleCommand(lvl.solutionCommand);
+    });
+
+    document.getElementById('btn-cancel-sol')?.addEventListener('click', () => {
+      this.closeModal();
+    });
+  }
+
+  doUndo() {
+    if (!this.undoStack.length) {
+      this.terminal.push('meta', ui().nothingToUndo);
+      return;
+    }
+    const snap = this.undoStack.pop();
+    this.fs.restore(snap);
+    if (this.golf.length) this.golf.pop();
+    this.terminal.push('meta', ui().undoMeta);
+    this.renderAll();
+    this.checkGoal();
+  }
+
+  doReset() {
+    if (this.mode === 'level' && this.level) {
+      this.fs = new VirtualFileSystem(this.level.startFS);
+      if (this.level.startCwd) this.fs.cwd = normalizePath(this.level.startCwd, this.fs.cwd);
+      this.fs.ensureDefaultProfile();
+      this.golf = [];
+      this.undoStack = [];
+      this.solvedFlash = false;
+      this.terminal.push('meta', ui().resetLevel(this.level.id));
+    } else {
+      this.fs = new VirtualFileSystem(defaultFsSpec());
+      this.golf = [];
+      this.undoStack = [];
+      this.solvedFlash = false;
+      this.terminal.push('meta', ui().resetSandbox);
+    }
+    this.renderAll();
+  }
+
+  enterSandbox() {
+    this.mode = 'sandbox';
+    this.level = null;
+    this.fs = new VirtualFileSystem(defaultFsSpec());
+    this.golf = [];
+    this.undoStack = [];
+    this.solvedFlash = false;
+    this.renderAll();
+    this.terminal.push('meta', ui().sandboxTitle);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('level');
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  startLevel(id) {
+    const raw = getLevel(id);
+    if (!raw) {
+      this.terminal.push('err', ui().unknownLevel(id));
+      return;
+    }
+    this.mode = 'level';
+    this.level = localizeLevel(raw, getLocale());
+    this.fs = new VirtualFileSystem(this.level.startFS);
+    if (this.level.startCwd) this.fs.cwd = normalizePath(this.level.startCwd, this.fs.cwd);
+    this.fs.ensureDefaultProfile();
+    this.golf = [];
+    this.undoStack = [];
+    this.solvedFlash = false;
+    this.renderAll();
+    this.terminal.push('meta', ui().levelMeta(this.level.id, this.level.name[getLocale()] || this.level.name.en_US));
+    this.replayLesson();
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('level', id);
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  replayLesson() {
+    if (!this.level) {
+      this.openModal(`
+        <div class="levels-dialog">
+          <h2>${escapeHtml(ui().aboutTitle)}</h2>
+          <p>An interactive Windows CMD learning environment with live filesystem visualizer.</p>
+          <div class="modal-actions">
+            <button type="button" class="btn primary" id="btn-close-about">${escapeHtml(ui().close)}</button>
+          </div>
+        </div>
+      `);
+      document.getElementById('btn-close-about')?.addEventListener('click', () => this.closeModal());
+      return;
+    }
+
+    const loc = getLocale();
+    const dialog =
+      (loc === 'fa' && getDialogFa(this.level.id)) ||
+      (this.level.startDialog && (this.level.startDialog[loc] || this.level.startDialog.en_US)) ||
+      getDialogFa(this.level.id);
+
+    if (!dialog || !dialog.childViews || !dialog.childViews.length) return;
+
+    let html = `<div class="lesson-dialog">`;
+    dialog.childViews.forEach((view, idx) => {
+      if (view.type === 'ModalAlert') {
+        const md = (view.options.markdowns || []).join('\n');
+        html += `<section class="lesson-card">${renderMarkdown(md)}</section>`;
+      } else if (view.type === 'CmdDemonstrationView') {
+        const before = (view.options.beforeMarkdowns || []).join('\n');
+        const after = (view.options.afterMarkdowns || []).join('\n');
+        html += `<section class="lesson-card demo-card">
+          ${renderMarkdown(before)}
+          <div class="demo-run">
+            <code>${escapeHtml(view.options.command || '')}</code>
+            <button class="btn primary" data-demo="${idx}" data-cmd="${escapeHtml(view.options.command || '')}">Run</button>
+          </div>
+          <div id="demo-after-${idx}" hidden>${renderMarkdown(after)}</div>
+        </section>`;
+      }
+    });
+
+    html += `
+      <div class="modal-actions">
+        <button type="button" class="btn primary" id="btn-start-lvl">${escapeHtml(ui().startLevel)}</button>
+        <button type="button" class="btn" id="btn-show-sol">${escapeHtml(ui().solution)}</button>
+        <button type="button" class="btn ghost" id="btn-close-dlg">${escapeHtml(ui().close)}</button>
+      </div>
+    </div>`;
+
+    this.openModal(html);
+
+    this.modalContentEl.querySelectorAll('[data-demo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cmd = btn.getAttribute('data-cmd');
+        const idx = btn.getAttribute('data-demo');
+        if (cmd) {
+          const clone = this.fs.clone();
+          const res = executeLine(cmd, { fs: clone });
+          res.lines.forEach((l) => this.terminal.push('out', l));
+        }
+        const afterEl = document.getElementById(`demo-after-${idx}`);
+        if (afterEl) {
+          afterEl.hidden = false;
+          btn.disabled = true;
+        }
       });
-    }
+    });
+
+    document.getElementById('btn-start-lvl')?.addEventListener('click', () => this.closeModal());
+    document.getElementById('btn-show-sol')?.addEventListener('click', () => this.showSolution());
+    document.getElementById('btn-close-dlg')?.addEventListener('click', () => this.closeModal());
   }
 
-  if (commands) {
-    for (const cmd of commands.split(';')) {
-      runCommand(cmd, { count: false, silent: true });
-    }
-    printPromptLine(fs.cwd + '>', commands.split(';').join('; '));
+  openLevelsDialog() {
+    const u = ui();
+    const loc = getLocale();
+    const groups = Object.entries(sequences).map(([key, seq]) => ({
+      key,
+      title: seq.displayName[loc] || seq.displayName.en_US,
+      about: seq.about[loc] || seq.about.en_US,
+      levels: seq.levels,
+    }));
+
+    let tabs = '';
+    let panels = '';
+    groups.forEach((g, i) => {
+      tabs += `<button type="button" class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${g.key}">${escapeHtml(g.title)}</button>`;
+      const items = g.levels
+        .map((lvl) => {
+          const prog = this.progress[lvl.id];
+          const solved = prog && prog.solved;
+          const best = prog?.best != null ? prog.best : '—';
+          const name = lvl.name[loc] || lvl.name.en_US;
+          return `
+            <li class="level-item ${solved ? 'solved' : ''}" data-level="${lvl.id}">
+              <span class="level-name">${escapeHtml(name)}</span>
+              <span class="level-golf">best ${best} / par ${lvl.par || 1}</span>
+            </li>
+          `;
+        })
+        .join('');
+
+      panels += `
+        <div class="tab-panel ${i === 0 ? 'active' : ''}" data-panel="${g.key}">
+          <p class="seq-about">${escapeHtml(g.about)}</p>
+          <ul class="level-list">${items}</ul>
+        </div>
+      `;
+    });
+
+    this.openModal(`
+      <div class="levels-dialog">
+        <h2>${escapeHtml(u.levelsTitle)}</h2>
+        <p class="levels-sub">${escapeHtml(u.pickChallenge)}</p>
+        <div class="levels-tabs">${tabs}</div>
+        ${panels}
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" id="btn-close-lvls">${escapeHtml(u.close)}</button>
+        </div>
+      </div>
+    `);
+
+    this.modalContentEl.querySelectorAll('[data-tab]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const key = tab.getAttribute('data-tab');
+        this.modalContentEl.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        this.modalContentEl.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+        tab.classList.add('active');
+        this.modalContentEl.querySelector(`[data-panel="${key}"]`)?.classList.add('active');
+      });
+    });
+
+    this.modalContentEl.querySelectorAll('[data-level]').forEach((item) => {
+      item.addEventListener('click', () => {
+        const id = item.getAttribute('data-level');
+        this.closeModal();
+        if (id) this.startLevel(id);
+      });
+    });
+
+    document.getElementById('btn-close-lvls')?.addEventListener('click', () => this.closeModal());
   }
 
-  refreshTree();
-  refreshPrompt();
-  refreshHud();
-  el.input.focus();
+  openUiHelp(runTour = false) {
+    if (runTour) startUiTour(document);
+    const u = ui();
+    this.openModal(`
+      <div class="levels-dialog">
+        <h2>${escapeHtml(u.uiGuideTitle)}</h2>
+        ${uiHelpModalHtml(getLocale())}
+        <div class="modal-actions">
+          <button type="button" class="btn primary" id="btn-close-help">${escapeHtml(u.close)}</button>
+        </div>
+      </div>
+    `);
+
+    this.modalContentEl.querySelectorAll('[data-focus-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-focus-id');
+        this.closeModal();
+        if (id) startUiTour(document, id, 3500);
+      });
+    });
+
+    document.getElementById('btn-close-help')?.addEventListener('click', () => this.closeModal());
+  }
+
+  openShareDialog() {
+    const u = ui();
+    const lvl = this.level || { id: 'sandbox', name: { en_US: 'Sandbox' }, par: 1 };
+    const count = this.golf.length || null;
+    const curriculum = summarizeCurriculum(this.progress, getLocale());
+    const share = buildShareTargets({
+      levelName: lvl.name[getLocale()] || lvl.name.en_US,
+      levelId: lvl.id,
+      commands: count,
+      par: lvl.par || 1,
+      curriculum,
+    });
+
+    this.openModal(`
+      <div class="levels-dialog">
+        <h2>${escapeHtml(u.shareTitle)}</h2>
+        <div class="share-block">
+          <div class="share-row">
+            <button type="button" class="btn share-btn linkedin" data-share="linkedin">LinkedIn</button>
+            <button type="button" class="btn share-btn x" data-share="x">X / Twitter</button>
+            <button type="button" class="btn share-btn facebook" data-share="facebook">Facebook</button>
+            <button type="button" class="btn share-btn copy" data-share="copy">${escapeHtml(u.copyPost)}</button>
+          </div>
+          <div class="share-status" id="share-dlg-status" hidden></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" id="btn-close-share">${escapeHtml(u.close)}</button>
+        </div>
+      </div>
+    `);
+
+    this.modalContentEl.querySelectorAll('[data-share]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const kind = btn.getAttribute('data-share');
+        const res = await shareWithClipboard(kind, share);
+        const status = document.getElementById('share-dlg-status');
+        if (status) {
+          status.hidden = false;
+          status.textContent = res.copied ? u.copyOk : u.shareOpened;
+        }
+      });
+    });
+
+    document.getElementById('btn-close-share')?.addEventListener('click', () => this.closeModal());
+  }
+
+  boot() {
+    const params = new URLSearchParams(window.location.search);
+    const levelId = params.get('level');
+    const loc = getLocale();
+    setLocale(loc);
+    this.renderToolbar();
+
+    this.terminal.push('meta', 'Microsoft Windows [Version 10.0.19045.4170]');
+    this.terminal.push('meta', '(learn-cmd virtual machine)');
+    this.terminal.push('out', '');
+
+    const summary = summarizeCurriculum(this.progress, loc);
+    if (summary.solvedCount > 0) {
+      this.terminal.push('out', resumeLine(summary, loc));
+    } else {
+      this.terminal.push('meta', loc === 'fa' ? 'پیشرفت شما در مرورگر ذخیره می‌شود.' : 'Progress is saved automatically in this browser.');
+    }
+
+    if (levelId) {
+      this.startLevel(levelId);
+    } else {
+      this.enterSandbox();
+    }
+  }
 }
 
-boot();
+// Instantiate on load
+function bootstrap() {
+  if (typeof window !== 'undefined' && !window.learnCmdApp) {
+    const app = new App();
+    window.learnCmdApp = app;
+  }
+}
 
-// Expose a few helpers for debugging in the console
-window.learnCmd = {
-  get fs() {
-    return fs;
-  },
-  runCommand,
-  COMMANDS,
-  commandNames,
-  lookupCommand,
-  sequences,
-  allLevels,
-  baseTree,
-  listCustomLevels,
-  levelFromJson,
-  registerCustomLevel,
-};
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
+  }
+}
