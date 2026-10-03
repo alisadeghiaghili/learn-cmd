@@ -81,8 +81,14 @@ body {
   font-size: 15px;
 }
 
-.brand span {
+.brand span,
+.brand-cmd,
+.cmd-logo,
+.welcome-dialog h2 span,
+.lesson-card h2 span,
+.lesson-card h3 span {
   color: var(--cmd);
+  font-weight: 700;
 }
 
 .level-title {

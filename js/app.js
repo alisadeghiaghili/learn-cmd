@@ -43,16 +43,25 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-function renderInline(text) {
-  let s = escapeHtml(text);
-  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  s = s.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-  );
-  return s;
+function renderInline(raw) {
+  const slots = [];
+  const parts = String(raw || '').split(/(<(?:a|span|img|b|code)\b[\s\S]*?<\/(?:a|span|b|code)>|<img\b[^>]*\/?>)/gi);
+  const mapped = parts.map((part, i) => {
+    if (i % 2 === 1) {
+      slots.push(part);
+      return '@@HTML' + (slots.length - 1) + '@@';
+    }
+    let s = escapeHtml(part);
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    s = s.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
+    return s;
+  }).join('');
+  return mapped.replace(/@@HTML(\d+)@@/g, (_m, i) => slots[Number(i)] || '');
 }
 
 function renderMarkdown(md) {
@@ -962,18 +971,49 @@ class App {
     window.history.replaceState({}, '', url.toString());
   }
 
+  openWelcomeModal() {
+    const u = ui();
+    const loc = getLocale();
+    this.openModal(`
+      <div class="levels-dialog welcome-dialog">
+        <h2>welcome to learn <span class="brand-cmd">CMD</span></h2>
+        <div class="markdown">
+          ${loc === 'fa' ? `
+            <p>آموزش تعاملی <strong>خط فرمان ویندوز (CMD)</strong> — محیط شبیه‌ساز زنده به همراه مراحل آموزشی هدف‌محور.</p>
+            <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
+            <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
+            <p><strong>۲۲</strong> مرحله آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
+          ` : loc === 'de' ? `
+            <p>Interaktives <strong>Windows CMD</strong> Tutorial — Sandbox + geführte Übungslevel.</p>
+            <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
+            <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
+            <p><strong>22</strong> Level enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
+          ` : `
+            <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — sandbox + guided levels.</p>
+            <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
+            <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
+            <p><strong>22</strong> levels included. Open Levels to begin, or stay in sandbox.</p>
+          `}
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn primary" id="btn-welcome-levels">${escapeHtml(u.levels)}</button>
+          <button type="button" class="btn ghost" id="btn-welcome-sandbox">${escapeHtml(u.sandboxBtn)}</button>
+        </div>
+      </div>
+    `);
+
+    document.getElementById('btn-welcome-levels')?.addEventListener('click', () => {
+      this.closeModal();
+      this.openLevelsDialog();
+    });
+    document.getElementById('btn-welcome-sandbox')?.addEventListener('click', () => {
+      this.closeModal();
+    });
+  }
+
   replayLesson() {
     if (!this.level) {
-      this.openModal(`
-        <div class="levels-dialog">
-          <h2>${escapeHtml(ui().aboutTitle)}</h2>
-          <p>An interactive Windows CMD learning environment with live filesystem visualizer.</p>
-          <div class="modal-actions">
-            <button type="button" class="btn primary" id="btn-close-about">${escapeHtml(ui().close)}</button>
-          </div>
-        </div>
-      `);
-      document.getElementById('btn-close-about')?.addEventListener('click', () => this.closeModal());
+      this.openWelcomeModal();
       return;
     }
 
@@ -1198,6 +1238,9 @@ class App {
       this.startLevel(levelId);
     } else {
       this.enterSandbox();
+      if (!params.has('NODEMO') && !params.has('no-welcome')) {
+        this.openWelcomeModal();
+      }
     }
   }
 }
