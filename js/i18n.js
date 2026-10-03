@@ -781,6 +781,18 @@ export function getLocale() {
     const saved = localStorage.getItem('learn-cmd.lang');
     if (saved === 'fa' || saved === 'en' || saved === 'de') {
       currentLocale = saved;
+      return currentLocale;
+    }
+  }
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    const nav = navigator.language.toLowerCase();
+    if (nav.startsWith('fa')) {
+      currentLocale = 'fa';
+      return currentLocale;
+    }
+    if (nav.startsWith('de')) {
+      currentLocale = 'de';
+      return currentLocale;
     }
   }
   return currentLocale;
@@ -845,6 +857,8 @@ export const UI_STRINGS = {
     wrongCommandNote: 'Wrong command? You stay here — progress is kept. History: ↑ / ↓',
     nowChip: 'now',
     stateNotes: 'State notes:',
+    criterionMet: 'Criterion met',
+    runCommand: (cmd) => `run '${cmd}'`,
     allSolutionMet: '✓ Goal criteria reached! Press Enter to finalize or move on.',
     bestSoFar: (best, par) => `Best so far: ${best} commands · ideal: ${par}`,
     idealSolution: (par) => `Best so far: 0 commands · ideal: ${par}`,
@@ -962,6 +976,8 @@ export const UI_STRINGS = {
     wrongCommandNote: 'فرمان اشتباه؟ همین‌جا می‌مانید — پیشرفت حفظ می‌شود. تاریخچه: ↑ / ↓',
     nowChip: 'اکنون',
     stateNotes: 'یادداشت وضعیت:',
+    criterionMet: 'شرط محقق شد',
+    runCommand: (cmd) => `اجرای '${cmd}'`,
     allSolutionMet: '✓ هدف مرحله محقق شد! برای رفتن به مرحله بعد کلید را بزنید.',
     bestSoFar: (best, par) => `بهترین تا اینجا: ${best} فرمان · ایده‌آل: ${par}`,
     idealSolution: (par) => `بهترین تا اینجا: ۰ فرمان · ایده‌آل: ${par}`,
@@ -1079,6 +1095,8 @@ export const UI_STRINGS = {
     wrongCommandNote: 'Falscher Befehl? Du bleibst hier — Fortschritt bleibt. History: ↑ / ↓',
     nowChip: 'jetzt',
     stateNotes: 'Statusnotizen:',
+    criterionMet: 'Kriterium erfüllt',
+    runCommand: (cmd) => `'${cmd}' ausführen`,
     allSolutionMet: '✓ Zielkriterien erreicht!',
     bestSoFar: (best, par) => `Bisher am besten: ${best} Befehle · Ideal: ${par}`,
     idealSolution: (par) => `Bisher am besten: 0 Befehle · Ideal: ${par}`,
@@ -1255,6 +1273,401 @@ export function ui(loc) {
   };
 }
 
+export const LEVEL_METADATA = {
+  'intro-echo': {
+    en: {
+      objective: 'Run `echo hello` to print your first greeting on the command line.',
+      learning: ['Understanding standard output (stdout)', 'Basic command grammar in CMD', 'Echoing text with `echo`'],
+      fieldNotes: ['`echo.` prints an empty blank line in real batch scripts.'],
+    },
+    fa: {
+      objective: 'دستور `echo hello` را تایپ کن تا اولین پیام خود را در خط فرمان چاپ کنی.',
+      learning: ['آشنایی با خروجی استاندارد (stdout)', 'قواعد پایه‌ای دستورات CMD', 'چاپ متن با دستور `echo`'],
+      fieldNotes: ['دستور `echo.` در اسکریپت‌های واقعی Batch یک سطر کاملاً خالی چاپ می‌کند.'],
+    },
+    de: {
+      objective: 'Führe `echo hello` aus, um deine erste Nachricht auf der Befehlszeile auszugeben.',
+      learning: ['Standardausgabe (stdout) verstehen', 'Grundlegende CMD-Befehlsgrammatik', 'Textausgabe mit `echo`'],
+      fieldNotes: ['`echo.` gibt in echten Batch-Skripten eine leere Zeile aus.'],
+    },
+  },
+  'intro-dir': {
+    en: {
+      objective: 'Run `dir` to inspect directories, file sizes, and dates in your user folder.',
+      learning: ['Reading directory listings', 'Recognizing <DIR> tags', 'File byte sizes'],
+      fieldNotes: ['`dir /b` produces a bare listing without headers, great for piping.'],
+    },
+    fa: {
+      objective: 'دستور `dir` را اجرا کن تا پوشه‌ها، اندازه فایل‌ها و تاریخ‌ها را بررسی کنی.',
+      learning: ['خواندن فهرست فایل‌ها و پوشه‌ها', 'تشخیص تگ‌های `<DIR>` برای پوشه‌ها', 'بررسی اندازه فایل‌ها بر حسب بایت'],
+      fieldNotes: ['سوییچ `dir /b` خروجی ساده و بدون سربرگ تولید می‌کند که برای اتصال به دستورات دیگر عالی است.'],
+    },
+    de: {
+      objective: 'Führe `dir` aus, um Verzeichnisse, Dateigrößen und Datumsangaben zu prüfen.',
+      learning: ['Verzeichnisauflistungen lesen', '<DIR>-Tags erkennen', 'Dateigrößen in Bytes prüfen'],
+      fieldNotes: ['`dir /b` erzeugt eine reine Namensliste ohne Kopfzeilen, ideal für Pipes.'],
+    },
+  },
+  'intro-cd': {
+    en: {
+      objective: 'Change your working directory into `Documents` with `cd Documents`.',
+      learning: ['Navigating folder hierarchies', 'Using relative and absolute paths', '`cd ..` back navigation'],
+      fieldNotes: ['`cd \\` jumps directly to the root of the current drive.'],
+    },
+    fa: {
+      objective: 'مسیر کاری خود را با دستور `cd Documents` به پوشه `Documents` تغییر بده.',
+      learning: ['پیمایش در ساختار سلسله‌مراتبی پوشه‌ها', 'استفاده از مسیرهای نسبی و مطلق', 'بازگشت به پوشه والد با `cd ..`'],
+      fieldNotes: ['دستور `cd \\` مستقیماً به ریشه درایو جاری پرش می‌کند.'],
+    },
+    de: {
+      objective: 'Wechsle dein Arbeitsverzeichnis mit `cd Documents` in den Ordner `Documents`.',
+      learning: ['Navigation in Verzeichnishierarchien', 'Relative und absolute Pfade nutzen', 'Rückwärts navigieren mit `cd ..`'],
+      fieldNotes: ['`cd \\` springt direkt in das Stammverzeichnis des aktuellen Laufwerks.'],
+    },
+  },
+  'intro-md': {
+    en: {
+      objective: 'Create a new directory named `projects` using `md projects`.',
+      learning: ['Creating directories with `md` or `mkdir`', 'Auto-creating nested parent folders'],
+      fieldNotes: ['`md a\\b\\c` creates all intermediate subdirectories in one shot.'],
+    },
+    fa: {
+      objective: 'یک پوشه جدید با نام `projects` با دستور `md projects` ایجاد کن.',
+      learning: ['ایجاد پوشه جدید با دستور `md` یا `mkdir`', 'ساخت خودکار ساختارهای شاخه‌ای در ویندوز'],
+      fieldNotes: ['دستور `md a\\b\\c` تمام زیرپوشه‌های میانی را به صورت یک‌جا ایجاد می‌کند.'],
+    },
+    de: {
+      objective: 'Erstelle ein neues Verzeichnis namens `projects` mit `md projects`.',
+      learning: ['Verzeichnisse mit `md` oder `mkdir` erstellen', 'Automatische Erstellung verschachtelter Ordner'],
+      fieldNotes: ['`md a\\b\\c` erstellt alle Zwischenverzeichnisse in einem einzigen Schritt.'],
+    },
+  },
+  'intro-files': {
+    en: {
+      objective: 'Create `readme.txt` with content `hello world` using `echo hello world>readme.txt`.',
+      learning: ['Output redirection with `>`', 'Writing file streams without text editors'],
+      fieldNotes: ['`>` truncates existing content, while `>>` appends to the end.'],
+    },
+    fa: {
+      objective: 'فایل `readme.txt` را با محتوای `hello world` با دستور `echo hello world>readme.txt` بساز.',
+      learning: ['هدایت خروجی با علامت `>` به فایل', 'نوشتن فایل‌های متنی بدون نیاز به ویرایشگر گرافیکی'],
+      fieldNotes: ['عملگر `>` فایل را از نو می‌نویسد، در حالی که `>>` به انتهای آن اضافه می‌کند.'],
+    },
+    de: {
+      objective: 'Erstelle `readme.txt` mit dem Inhalt `hello world` mittels `echo hello world>readme.txt`.',
+      learning: ['Ausgabeumleitung mit `>`', 'Erstellen von Textdateien ohne grafischen Editor'],
+      fieldNotes: ['`>` überschreibt die Zieldatei, während `>>` neuen Text anhängt.'],
+    },
+  },
+  'intro-type': {
+    en: {
+      objective: 'Display the contents of `notes.txt` in terminal using `type notes.txt`.',
+      learning: ['Inspecting text files directly in CMD', 'Equivalent of Unix `cat` command'],
+      fieldNotes: ['`type nul > file.txt` creates a quick empty file in Windows.'],
+    },
+    fa: {
+      objective: 'محتوای فایل `notes.txt` را با دستور `type notes.txt` در ترمینال نمایش بده.',
+      learning: ['مشاهده سریع محتوای فایل‌های متنی در ترمینال', 'آشنایی با معادل دستور `cat` لینوکس در ویندوز'],
+      fieldNotes: ['دستور `type nul > file.txt` یک فایل متنی کاملاً خالی ایجاد می‌کند.'],
+    },
+    de: {
+      objective: 'Zeige den Inhalt von `notes.txt` mit `type notes.txt` im Terminal an.',
+      learning: ['Textdateien direkt im Terminal einsehen', 'Windows-Pendant zum Unix-Befehl `cat`'],
+      fieldNotes: ['`type nul > datei.txt` erstellt eine leere Datei unter Windows.'],
+    },
+  },
+  'intro-copy': {
+    en: {
+      objective: 'Copy `notes.txt` into the `Documents` directory with `copy notes.txt Documents`.',
+      learning: ['Duplicating files across folders', 'Preserving source file during duplication'],
+      fieldNotes: ['`copy /y` suppresses the overwrite confirmation prompt.'],
+    },
+    fa: {
+      objective: 'فایل `notes.txt` را با دستور `copy notes.txt Documents` به پوشه `Documents` کپی کن.',
+      learning: ['تکثیر و کپی فایل‌ها بین مسیرها', 'حفظ فایل مبدأ در عملیات کپی'],
+      fieldNotes: ['سوییچ `copy /y` درخواست تأیید جایگزینی فایل در مقصد را غیرفعال می‌کند.'],
+    },
+    de: {
+      objective: 'Kopiere `notes.txt` mit `copy notes.txt Documents` in das Verzeichnis `Documents`.',
+      learning: ['Dateien zwischen Verzeichnissen duplizieren', 'Quelldateien beim Kopieren beibehalten'],
+      fieldNotes: ['`copy /y` unterdrückt die Bestätigungsabfrage beim Überschreiben.'],
+    },
+  },
+  'intro-move': {
+    en: {
+      objective: 'Move `Downloads\\report.txt` into `Documents` with `move Downloads\\report.txt Documents`.',
+      learning: ['Relocating files between directories', 'Atomic movement across paths'],
+      fieldNotes: ['`move` can relocate and rename a file in a single step.'],
+    },
+    fa: {
+      objective: 'فایل `Downloads\\report.txt` را با دستور `move Downloads\\report.txt Documents` منتقل کن.',
+      learning: ['انتقال فایل‌ها بین پوشه‌ها با `move`', 'جابه‌جایی ساختاری فایل‌ها روی دیسک'],
+      fieldNotes: ['دستور `move` می‌تواند فایل را هنگام انتقال هم‌زمان تغییر نام نیز بدهد.'],
+    },
+    de: {
+      objective: 'Verschiebe `Downloads\\report.txt` mit `move Downloads\\report.txt Documents` nach `Documents`.',
+      learning: ['Dateien zwischen Verzeichnissen verschieben', 'Effiziente Verlagerung auf Dateisystemebene'],
+      fieldNotes: ['`move` kann Dateien beim Verschieben gleichzeitig umbenennen.'],
+    },
+  },
+  'intro-ren': {
+    en: {
+      objective: 'Rename `notes.txt` to `mynotes.txt` using `ren notes.txt mynotes.txt`.',
+      learning: ['In-place renaming with `ren` or `rename`', 'Target argument cannot be a path'],
+      fieldNotes: ['You cannot specify a new directory path in the second argument of `ren`.'],
+    },
+    fa: {
+      objective: 'نام فایل `notes.txt` را با دستور `ren notes.txt mynotes.txt` به `mynotes.txt` تغییر بده.',
+      learning: ['تغییر نام فایل با دستور `ren` یا `rename`', 'توجه به اینکه مقصد نباید مسیر پوشه باشد'],
+      fieldNotes: ['در دستور `ren` آرگومان دوم فقط باید نام جدید باشد و نباید شامل مسیر پوشه باشد.'],
+    },
+    de: {
+      objective: 'Benenne `notes.txt` mit `ren notes.txt mynotes.txt` in `mynotes.txt` um.',
+      learning: ['Dateien direkt umbenennen mit `ren` oder `rename`', 'Zweites Argument darf kein Pfad sein'],
+      fieldNotes: ['Das zweite Argument von `ren` darf kein Verzeichnis enthalten, nur den Namen.'],
+    },
+  },
+  'intro-del': {
+    en: {
+      objective: 'Delete `secret.txt` using `del secret.txt`.',
+      learning: ['Permanently removing files with `del`', 'CMD file deletion mechanics'],
+      fieldNotes: ['Files deleted via `del` bypass the Windows Recycle Bin.'],
+    },
+    fa: {
+      objective: 'فایل `secret.txt` را با دستور `del secret.txt` حذف کن.',
+      learning: ['حذف قطعی فایل‌ها با `del` یا `erase`', 'مکانیسم حذف فایل در خط فرمان'],
+      fieldNotes: ['فایل‌هایی که با `del` در خط فرمان حذف می‌شوند به سطل بازیافت نمی‌روند.'],
+    },
+    de: {
+      objective: 'Lösche `secret.txt` mit `del secret.txt`.',
+      learning: ['Endgültiges Löschen von Dateien mit `del`', 'Löschmechanismen der CMD verstehen'],
+      fieldNotes: ['Mit `del` gelöschte Dateien umgehen den Windows-Papierkorb.'],
+    },
+  },
+  'intro-rd': {
+    en: {
+      objective: 'Remove directory `oldstuff` recursively and quietly: `rd /s /q oldstuff`.',
+      learning: ['Directory removal with `rd` or `rmdir`', 'Recursive `/s` and quiet `/q` flags'],
+      fieldNotes: ['`rd` without `/s` only removes empty directories.'],
+    },
+    fa: {
+      objective: 'پوشه `oldstuff` را همراه با محتویات بدون سؤال پاک کن: `rd /s /q oldstuff`.',
+      learning: ['حذف پوشه‌ها با دستور `rd` یا `rmdir`', 'استفاده از سوییچ بازگشتی `/s` و سوییچ بی‌صدا `/q`'],
+      fieldNotes: ['دستور `rd` بدون سوییچ `/s` فقط می‌تواند پوشه‌های کاملاً خالی را حذف کند.'],
+    },
+    de: {
+      objective: 'Lösche den Ordner `oldstuff` rekursiv und ohne Nachfrage: `rd /s /q oldstuff`.',
+      learning: ['Verzeichnisse mit `rd` oder `rmdir` löschen', 'Die Schalter `/s` (rekursiv) und `/q` (still)'],
+      fieldNotes: ['`rd` ohne `/s` kann nur vollkommen leere Verzeichnisse löschen.'],
+    },
+  },
+  'intro-tree': {
+    en: {
+      objective: 'Inspect the filesystem structure with `tree`.',
+      learning: ['Visualizing nested directory structures', 'Understanding branch depth'],
+      fieldNotes: ['`tree /f` lists all files inside directories as well.'],
+    },
+    fa: {
+      objective: 'ساختار پوشه‌ها و فایل‌های دیسک را با دستور `tree` بررسی کن.',
+      learning: ['مشاهده نموداری سلسله‌مراتب پوشه‌ها', 'درک عمق شاخه‌های دایرکتوری'],
+      fieldNotes: ['سوییچ `tree /f` علاوه بر ساختار پوشه‌ها، فایل‌های موجود را نیز نشان می‌دهد.'],
+    },
+    de: {
+      objective: 'Untersuche die Verzeichnisstruktur mit `tree`.',
+      learning: ['Visualisierung verschachtelter Ordnerbäume', 'Hierarchietiefen verstehen'],
+      fieldNotes: ['`tree /f` listet zusätzlich zu den Ordnern auch alle Dateien auf.'],
+    },
+  },
+  'files-wildcard': {
+    en: {
+      objective: 'Delete all `.tmp` files using wildcards: `del *.tmp`.',
+      learning: ['Pattern matching with `*` and `?` wildcards', 'Batch file operations'],
+      fieldNotes: ['`*.*` targets all files in the current folder.'],
+    },
+    fa: {
+      objective: 'تمام فایل‌های دارای پسوند `.tmp` را با دستور `del *.tmp` پاک کن.',
+      learning: ['تطبیق الگو با نویسه‌های عمومی `*` و `?`', 'عملیات دسته‌جمعی روی فایل‌ها'],
+      fieldNotes: ['الگوی `*.*` تمام فایل‌های موجود در پوشه کاری جاری را انتخاب می‌کند.'],
+    },
+    de: {
+      objective: 'Lösche alle `.tmp`-Dateien mit Platzhaltern: `del *.tmp`.',
+      learning: ['Musterabgleich mit den Platzhaltern `*` und `?`', 'Stapelverarbeitung von Dateien'],
+      fieldNotes: ['`*.*` wählt alle Dateien im aktuellen Verzeichnis aus.'],
+    },
+  },
+  'files-paths': {
+    en: {
+      objective: 'Create nested path `work\\app` and write `work\\app\\main.js`.',
+      learning: ['Deep path creation in CMD', 'Chaining directory creation and file writing'],
+      fieldNotes: ['Windows supports long and deep relative paths separated by backslashes `\\`.'],
+    },
+    fa: {
+      objective: 'مسیر تو در توی `work\\app` را ایجاد کن و فایل `work\\app\\main.js` را در آن بنویس.',
+      learning: ['کار با مسیرهای عمیق در CMD', 'زنجیره کردن ساخت پوشه و نوشتن فایل'],
+      fieldNotes: ['در ویندوز مسیرها با علامت بک‌اسلش `\\` از یکدیگر تفکیک می‌شوند.'],
+    },
+    de: {
+      objective: 'Erstelle den Pfad `work\\app` und schreibe `work\\app\\main.js`.',
+      learning: ['Tiefe Pfadstrukturen in der CMD anlegen', 'Befehle zur Ordner- und Dateierstellung kombinieren'],
+      fieldNotes: ['Windows verwendet den Backslash `\\` als primäres Pfadtrennzeichen.'],
+    },
+  },
+  'files-append': {
+    en: {
+      objective: 'Append lines to `log.txt` using redirection operators `>` and `>>`.',
+      learning: ['Single `>` replaces content; double `>>` appends', 'Building log files progressively'],
+      fieldNotes: ['Appending is thread-safe for simple CMD batch append workflows.'],
+    },
+    fa: {
+      objective: 'خطوط جدید را با عملگرهای `>` و `>>` به فایل `log.txt` اضافه کن.',
+      learning: ['عملگر `>` فایل را بازنویسی می‌کند و عملگر `>>` به انتهای آن می‌افزاید', 'ساخت تدریجی فایل‌های لاگ'],
+      fieldNotes: ['عملگر `>>` اگر فایل وجود نداشته باشد، آن را به طور خودکار ایجاد می‌کند.'],
+    },
+    de: {
+      objective: 'Hänge Zeilen mit `>` und `>>` an die Datei `log.txt` an.',
+      learning: ['`>` überschreibt die Datei, während `>>` Zeilen anhängt', 'Schrittweiser Aufbau von Protokolldateien'],
+      fieldNotes: ['`>>` erstellt die Zieldatei automatisch, falls sie noch nicht existiert.'],
+    },
+  },
+  'files-fc': {
+    en: {
+      objective: 'Compare differences between `a.txt` and `b.txt` with `fc a.txt b.txt`.',
+      learning: ['Comparing files with `fc` (File Compare)', 'Interpreting terminal diff output'],
+      fieldNotes: ['`fc /b` performs a binary byte-by-byte comparison instead of text.'],
+    },
+    fa: {
+      objective: 'تفاوت‌های دو فایل `a.txt` و `b.txt` را با دستور `fc a.txt b.txt` بررسی کن.',
+      learning: ['مقایسه فایل‌ها با ابزار `fc`', 'خواندن خروجی تفاوت‌ها (diff) در ترمینال'],
+      fieldNotes: ['سوییچ `fc /b` مقایسه باینری و بایت به بایت فایل‌ها را به جای متن انجام می‌دهد.'],
+    },
+    de: {
+      objective: 'Vergleiche `a.txt` und `b.txt` mit `fc a.txt b.txt`.',
+      learning: ['Dateivergleich mit dem Werkzeug `fc`', 'Diff-Ausgaben im Terminal interpretieren'],
+      fieldNotes: ['`fc /b` führt einen binären Byte-Vergleich statt eines Textvergleichs durch.'],
+    },
+  },
+  'pipes-find': {
+    en: {
+      objective: 'Search for string "todo" inside `notes.txt` with `find "todo" notes.txt`.',
+      learning: ['Searching string occurrences inside text files', 'Case-sensitive exact matching'],
+      fieldNotes: ['`find /v` prints lines that do NOT match the searched string.'],
+    },
+    fa: {
+      objective: 'کلمه "todo" را با دستور `find "todo" notes.txt` در فایل `notes.txt` پیدا کن.',
+      learning: ['جستجوی رشته‌ها در فایل‌های متنی با `find`', 'دقت به حساسیت حروف در جستجو'],
+      fieldNotes: ['سوییچ `find /v` خطوطی را نمایش می‌دهد که شامل عبارت جستجوشده نیستند.'],
+    },
+    de: {
+      objective: 'Suche nach "todo" in `notes.txt` mit `find "todo" notes.txt`.',
+      learning: ['Textstellen in Dateien mit `find` durchsuchen', 'Groß-/Kleinschreibung bei der Suche'],
+      fieldNotes: ['`find /v` invertiert die Suche und gibt alle nicht passenden Zeilen aus.'],
+    },
+  },
+  'pipes-pipe': {
+    en: {
+      objective: 'Pipe output of `type names.txt` into `sort` and redirect: `type names.txt | sort>sorted.txt`.',
+      learning: ['Using pipe `|` to connect stdout to stdin', 'Composing CLI processing pipelines'],
+      fieldNotes: ['Piping does not require intermediate temporary files on disk.'],
+    },
+    fa: {
+      objective: 'خروجی `type names.txt` را با پایپ به `sort` بفرست و در `sorted.txt` ذخیره کن.',
+      learning: ['اتصال دستورات با علامت پایپ `|`', 'ساخت خطوط لوله پردازشی در خط فرمان'],
+      fieldNotes: ['پایپ کردن داده‌ها نیاز به ایجاد فایل‌های واسط روی دیسک را از بین می‌برد.'],
+    },
+    de: {
+      objective: 'Leite `type names.txt` mit einer Pipe an `sort` weiter: `type names.txt | sort>sorted.txt`.',
+      learning: ['Den Pipe-Operator `|` zur Datenübergabe nutzen', 'Zusammensetzen modularer Datenströme'],
+      fieldNotes: ['Pipes leiten Daten im Speicher weiter, ohne temporäre Zwischendateien anzulegen.'],
+    },
+  },
+  'pipes-findstr': {
+    en: {
+      objective: 'Search case-insensitively for "error" in `app.log` with `findstr /i error app.log`.',
+      learning: ['Advanced regex search with `findstr`', 'Case-insensitive `/i` search flag'],
+      fieldNotes: ['`findstr /r` enables regular expression syntax support.'],
+    },
+    fa: {
+      objective: 'کلمه "error" را بدون حساسیت به حروف در `app.log` بیاب: `findstr /i error app.log`.',
+      learning: ['جستجوی پیشرفته با `findstr`', 'استفاده از سوییچ `/i` برای نادیده‌گرفتن بزرگی و کوچکی حروف'],
+      fieldNotes: ['سوییچ `findstr /r` امکان استفاده از الگوهای عبارات منظم (Regex) را فعال می‌کند.'],
+    },
+    de: {
+      objective: 'Suche ohne Beachtung der Groß-/Kleinschreibung nach "error": `findstr /i error app.log`.',
+      learning: ['Erweiterte Suche mit `findstr`', 'Der Schalter `/i` für case-insensitive Suche'],
+      fieldNotes: ['`findstr /r` ermöglicht die Verwendung regulärer Ausdrücke.'],
+    },
+  },
+  'adv-chain': {
+    en: {
+      objective: 'Conditionally create directory and file: `md backup && echo data>backup\\copy.txt`.',
+      learning: ['Conditional execution with `&&`', 'Preventing second command on initial failure'],
+      fieldNotes: ['`command1 || command2` executes command2 only if command1 failed.'],
+    },
+    fa: {
+      objective: 'پوشه و فایل را مشروط به موفقیت بساز: `md backup && echo data>backup\\copy.txt`.',
+      learning: ['اجرای مشروط دستورات با عملگر `&&`', 'جلوگیری از اجرای دستور دوم در صورت شکست دستور اول'],
+      fieldNotes: ['عملگر `command1 || command2` دستور دوم را تنها در صورت شکست اولی اجرا می‌کند.'],
+    },
+    de: {
+      objective: 'Erstelle Ordner und Datei bedingt: `md backup && echo data>backup\\copy.txt`.',
+      learning: ['Bedingte Befehlsausführung mit `&&`', 'Abbruch bei Fehlern im ersten Befehl'],
+      fieldNotes: ['`command1 || command2` führt command2 nur aus, falls command1 fehlschlägt.'],
+    },
+  },
+  'adv-env': {
+    en: {
+      objective: 'Store variable and expand it: `set MSG=salam learn-cmd & echo %MSG%>greeting.txt`.',
+      learning: ['Environment variable syntax `%VAR%`', 'Combining variable assignment and usage'],
+      fieldNotes: ['Variables defined with `set` persist across the active CMD session.'],
+    },
+    fa: {
+      objective: 'متغیر را مقداردهی و در فایل بنویس: `set MSG=salam learn-cmd & echo %MSG%>greeting.txt`.',
+      learning: ['سینتکس متغیرهای محیطی با علامت `%VAR%`', 'ترکیب مقداردهی متغیر و فراخوانی آن'],
+      fieldNotes: ['متغیرهایی که با دستور `set` تعریف می‌شوند در طول همان نشست CMD باقی می‌مانند.'],
+    },
+    de: {
+      objective: 'Variable setzen und verwenden: `set MSG=salam learn-cmd & echo %MSG%>greeting.txt`.',
+      learning: ['Syntax für Umgebungsvariablen `%VAR%`', 'Zuweisung und Nutzung von Variablen kombinieren'],
+      fieldNotes: ['Mit `set` definierte Variablen bleiben für die gesamte Sitzung erhalten.'],
+    },
+  },
+  'adv-mixed': {
+    en: {
+      objective: 'Build an entire structured project layout with chained commands.',
+      learning: ['Mastering multi-step CMD automation', 'Real-world deployment file scaffolding'],
+      fieldNotes: ['Combining `&`, `&&`, and paths enables complete project scaffolding in CMD.'],
+    },
+    fa: {
+      objective: 'ساختار کامل پروژه را با ترکیب دستورات زنجیره‌ای در یک خط پیاده‌سازی کن.',
+      learning: ['تسلط بر اتوماسیون چندمرحله‌ای در خط فرمان CMD', 'ساخت چیدمان استاندارد پروژه‌های واقعی'],
+      fieldNotes: ['ترکیب عملگرهای `&` و `&&` امکان ساخت کامل ساختار پروژه را در یک خط فراهم می‌کند.'],
+    },
+    de: {
+      objective: 'Erstelle eine vollständige Projektstruktur mit verketteten Befehlen.',
+      learning: ['Beherrschung mehrstufiger CMD-Automatisierung', 'Praxisnaher Aufbau von Projektstrukturen'],
+      fieldNotes: ['Die Kombination von `&`, `&&` und Pfaden ermöglicht vollständige Projekterstellung.'],
+    },
+  },
+};
+
+export const FALLBACK_METADATA = {
+  en: {
+    objective: 'Reach the target filesystem state.',
+    learning: ['Windows CMD syntax', 'Command line filesystem navigation'],
+    fieldNotes: ['Use `hint` or `show solution` if you get stuck.'],
+  },
+  fa: {
+    objective: 'رسیدن به وضعیت مطلوب فایل‌سیستم.',
+    learning: ['سینتکس ویندوز CMD', 'پیمایش فایل‌سیستم در خط فرمان'],
+    fieldNotes: ['اگر گیر افتادید، از `hint` یا `show solution` استفاده کنید.'],
+  },
+  de: {
+    objective: 'Erreiche den Zielzustand des Dateisystems.',
+    learning: ['Windows CMD-Syntax', 'Dateisystem-Navigation auf der Befehlszeile'],
+    fieldNotes: ['Nutze `hint` oder `show solution`, falls du Hilfe brauchst.'],
+  },
+};
+
 /**
  * Localize a level definition for display in the right dock and UI dialogs.
  *
@@ -1272,49 +1685,19 @@ export function localizeLevel(level, loc) {
   const about =
     (level.about && (level.about[code] || level.about.en_US || Object.values(level.about)[0])) || '';
 
-  /** @type {Record<string, { objective: string, learning: string[], fieldNotes: string[] }>} */
-  const metadata = {
-    'intro-echo': {
-      objective: 'Run `echo hello` to print your first greeting on the command line.',
-      learning: ['Understanding standard output', 'Basic command grammar in CMD', 'Echoing text'],
-      fieldNotes: ['`echo.` prints an empty blank line in real batch scripts.'],
-    },
-    'intro-dir': {
-      objective: 'Run `dir` to inspect directories, file sizes, and dates in your user folder.',
-      learning: ['Reading directory listings', 'Recognizing <DIR> tags', 'File byte sizes'],
-      fieldNotes: ['`dir /b` produces a bare listing without headers, great for piping.'],
-    },
-    'intro-cd': {
-      objective: 'Change your working directory into `Documents`.',
-      learning: ['Navigating folder hierarchies', 'Using relative and absolute paths', '`cd ..` back navigation'],
-      fieldNotes: ['`cd \\` jumps directly to the root of the current drive.'],
-    },
-    'intro-md': {
-      objective: 'Create a new directory named `projects`.',
-      learning: ['Creating directories with `md` or `mkdir`', 'Auto-creating nested parent folders'],
-      fieldNotes: ['`md a\\b\\c` creates all intermediate subdirectories in one shot.'],
-    },
-    'intro-files': {
-      objective: 'Create a file named `hello.txt` with content `hello world` using `>`.',
-      learning: ['Output redirection with `>`', 'Writing file streams without text editors'],
-      fieldNotes: ['`>` truncates existing content, while `>>` appends to the end.'],
-    },
-  };
-
-  const extra = metadata[level.id] || {
-    objective: about || hint || 'Reach the target filesystem state.',
-    learning: ['Windows CMD syntax', 'Command line filesystem navigation'],
-    fieldNotes: ['Use `hint` or `show solution` if you get stuck.'],
-  };
+  const metaForLevel = LEVEL_METADATA[level.id];
+  const extra =
+    (metaForLevel && (metaForLevel[code] || metaForLevel.en)) ||
+    (FALLBACK_METADATA[code] || FALLBACK_METADATA.en);
 
   return {
     ...level,
-    name: { [code]: name, en_US: level.name?.en_US || name },
-    hint: { [code]: hint, en_US: level.hint?.en_US || hint },
-    about: { [code]: about, en_US: level.about?.en_US || about },
-    objective: extra.objective,
-    learning: extra.learning,
-    fieldNotes: extra.fieldNotes,
+    name: { ...(level.name || {}), [code]: name, en_US: level.name?.en_US || name },
+    hint: { ...(level.hint || {}), [code]: hint, en_US: level.hint?.en_US || hint },
+    about: { ...(level.about || {}), [code]: about, en_US: level.about?.en_US || about },
+    objective: extra.objective || about || hint,
+    learning: extra.learning || [],
+    fieldNotes: extra.fieldNotes || [],
   };
 }
 

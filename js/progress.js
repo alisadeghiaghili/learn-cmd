@@ -199,24 +199,39 @@ export function summarizeCurriculum(progress, lang = 'en') {
  */
 export function resumeLine(summary, lang = 'en') {
   const isFa = lang === 'fa';
+  const isDe = lang === 'de';
   if (!summary.solvedCount) {
     return isFa
       ? `هنوز مرحله‌ای تکمیل نشده (${summary.total} مرحله آماده است). با دستور \`levels\` شروع کن.`
-      : `No saved progress yet (${summary.total} levels waiting). Start with \`levels\`.`;
+      : isDe
+        ? `Noch kein gespeicherter Fortschritt (${summary.total} Level verfügbar). Starte mit \`levels\`.`
+        : `No saved progress yet (${summary.total} levels waiting). Start with \`levels\`.`;
   }
   const nextText = summary.next
     ? isFa
       ? `مرحله بعدی: ${summary.next.name} (${summary.next.id})`
-      : `Next up: ${summary.next.name} (${summary.next.id})`
+      : isDe
+        ? `Nächstes Level: ${summary.next.name} (${summary.next.id})`
+        : `Next up: ${summary.next.name} (${summary.next.id})`
     : isFa
       ? 'تمامی مراحل با موفقیت به پایان رسیده‌اند.'
-      : 'All levels cleared.';
+      : isDe
+        ? 'Alle Level erfolgreich abgeschlossen.'
+        : 'All levels cleared.';
 
   if (isFa) {
     return [
       `خوش آمدید — پیشرفت ذخیره‌شده: ${summary.solvedCount}/${summary.total} مرحله (${summary.percent}٪).`,
       nextText,
-      `برای انتخاب مرحله \`levels\` را تایپ کن.`,
+      `برای ادامه \`levels\` را باز کن. برای راهنمایی در هر مرحله \`steps\` را تایپ کن.`,
+    ].join('\n');
+  }
+
+  if (isDe) {
+    return [
+      `Willkommen zurück — Fortschritt gespeichert: ${summary.solvedCount}/${summary.total} Level (${summary.percent}%).`,
+      nextText,
+      `Öffne \`levels\` zum Fortsetzen. Tippe \`steps\` für Hilfestellung im Level.`,
     ].join('\n');
   }
 

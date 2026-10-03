@@ -328,8 +328,10 @@ class App {
     const u = ui();
     if (this.mode === 'level' && this.level) {
       const loc = getLocale();
+      const raw = getLevel(this.level.id);
       const name =
-        (this.level.name && (this.level.name[loc] || this.level.name.en_US || Object.values(this.level.name)[0])) ||
+        (this.level.name && (this.level.name[loc] || this.level.name.en_US)) ||
+        (raw && raw.name && (raw.name[loc] || raw.name.en_US)) ||
         this.level.id;
       const par = this.level.par || 1;
       this.titleEl.textContent = typeof u.titleLine === 'function'
@@ -345,7 +347,8 @@ class App {
     this.renderToolbar();
 
     if (this.level) {
-      this.level = localizeLevel(this.level, loc);
+      const raw = getLevel(this.level.id) || this.level;
+      this.level = localizeLevel(raw, loc);
     }
     this.renderAll();
     this.renderVisitorBadge();
@@ -357,6 +360,10 @@ class App {
           ? 'Sprache auf Deutsch geändert.'
           : 'Language set to English.'
     );
+    if (this.level) {
+      const lvlName = this.level.name[loc] || this.level.name.en_US || this.level.id;
+      this.terminal.push('meta', ui().levelMeta(this.level.id, lvlName));
+    }
   }
 
   async initVisitorCounter() {
@@ -500,7 +507,7 @@ class App {
         <div class="g-label" dir="ltr">${isMet ? '✓' : isCurrent ? '▶' : '○'} <code>${escapeHtml(cmd)}</code>${
           isCurrent ? ` <span class="chip current-chip">${escapeHtml(u.nowChip || 'now')}</span>` : ''
         }</div>
-        <div class="g-detail" dir="ltr">${escapeHtml(isMet ? 'Criterion met' : `run '${cmd}'`)}</div>
+        <div class="g-detail">${escapeHtml(isMet ? (u.criterionMet || 'Criterion met') : (typeof u.runCommand === 'function' ? u.runCommand(cmd) : `run '${cmd}'`))}</div>
       </li>`;
     });
 
@@ -1184,7 +1191,7 @@ class App {
     if (summary.solvedCount > 0) {
       this.terminal.push('out', resumeLine(summary, loc));
     } else {
-      this.terminal.push('meta', loc === 'fa' ? 'پیشرفت شما در مرورگر ذخیره می‌شود.' : 'Progress is saved automatically in this browser.');
+      this.terminal.push('meta', loc === 'fa' ? 'پیشرفت شما در مرورگر ذخیره می‌شود.' : loc === 'de' ? 'Fortschritt wird automatisch in diesem Browser gespeichert.' : 'Progress is saved automatically in this browser.');
     }
 
     if (levelId) {

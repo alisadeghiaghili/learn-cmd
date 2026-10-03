@@ -371,10 +371,15 @@ test('summarizeCurriculum and resumeLine calculate correct stats', async () => {
 
   const lineFa = resumeLine(summary, 'fa');
   assert.match(lineFa, /پیشرفت ذخیره‌شده/);
+
+  const lineDe = resumeLine(summary, 'de');
+  assert.match(lineDe, /Willkommen zurück/);
+  assert.match(lineDe, /Fortschritt gespeichert/);
 });
 
 test('i18n exports valid dictionaries and handles locale switching', async () => {
-  const { LOCALES, ui, localizeLevel } = await import('../js/i18n.js');
+  const { LOCALES, ui, localizeLevel, LEVEL_METADATA } = await import('../js/i18n.js');
+  const { allLevels, getLevel } = await import('../js/levels.js');
   assert.deepEqual(LOCALES, ['en', 'fa', 'de']);
 
   for (const loc of LOCALES) {
@@ -383,20 +388,45 @@ test('i18n exports valid dictionaries and handles locale switching', async () =>
     assert.ok(strings.guide);
     assert.ok(strings.hint);
     assert.ok(strings.solution);
+    assert.ok(strings.criterionMet);
+    assert.ok(typeof strings.runCommand === 'function');
     assert.ok(Array.isArray(strings.quiz));
     assert.ok(strings.quiz.length >= 3);
   }
 
-  const dummyLvl = {
-    id: 'intro-echo',
-    name: { en_US: 'Echo', fa: 'اکو' },
-    hint: { en_US: 'type echo' },
-    about: { en_US: 'intro' },
-  };
-  const localized = localizeLevel(dummyLvl, 'fa');
-  assert.equal(localized.name.fa, 'اکو');
-  assert.ok(localized.objective);
-  assert.ok(Array.isArray(localized.learning));
+  // Ensure every sequenced level has metadata in en, fa, de
+  const { sequences } = await import('../js/levels.js');
+  const sequencedLevels = Object.values(sequences).flatMap((s) => s.levels);
+  for (const lvl of sequencedLevels) {
+    const meta = LEVEL_METADATA[lvl.id];
+    assert.ok(meta, `Sequenced level ${lvl.id} must have LEVEL_METADATA`);
+    for (const loc of ['en', 'fa', 'de']) {
+      assert.ok(meta[loc], `Level ${lvl.id} must have metadata for ${loc}`);
+      assert.ok(meta[loc].objective, `Level ${lvl.id} must have objective for ${loc}`);
+      assert.ok(Array.isArray(meta[loc].learning) && meta[loc].learning.length > 0, `Level ${lvl.id} must have learning items for ${loc}`);
+      assert.ok(Array.isArray(meta[loc].fieldNotes) && meta[loc].fieldNotes.length > 0, `Level ${lvl.id} must have fieldNotes for ${loc}`);
+    }
+  }
+
+  // Ensure fallback works for custom/arbitrary levels
+  const customLvl = { id: 'custom-test', name: { en_US: 'Custom' }, startFS: {} };
+  const localizedCustom = localizeLevel(customLvl, 'fa');
+  assert.equal(localizedCustom.objective, 'رسیدن به وضعیت مطلوب فایل‌سیستم.');
+  assert.ok(localizedCustom.learning.length > 0);
+  assert.ok(localizedCustom.fieldNotes.length > 0);
+
+  const rawDir = getLevel('intro-dir');
+  assert.ok(rawDir);
+  const localizedFa = localizeLevel(rawDir, 'fa');
+  assert.equal(localizedFa.name.fa, 'مشاهده محتوا با DIR');
+  assert.match(localizedFa.objective, /dir/);
+  assert.match(localizedFa.objective, /پوشه‌ها/);
+  assert.ok(localizedFa.learning.some(l => l.includes('<DIR>')));
+  assert.ok(localizedFa.fieldNotes.some(f => f.includes('dir /b')));
+
+  const localizedDe = localizeLevel(rawDir, 'de');
+  assert.match(localizedDe.objective, /dir/);
+  assert.match(localizedDe.objective, /Verzeichnisse/);
 });
 
 test('command-only levels solve properly when executed and recorded in golf', async () => {
