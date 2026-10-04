@@ -669,3 +669,97 @@ test('batch scripts support arguments %1..%9, %*, and GOTO labels', async () => 
   assert.deepEqual(prodRes.lines, ['Deploying to production v2.0', 'Done']);
 });
 
+test('echo. and nul device handle blank lines and empty file creation', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  const res1 = executeLine('echo.', { fs });
+  assert.ok(res1.ok);
+  assert.deepEqual(res1.lines, ['']);
+
+  executeLine('echo. > blank.txt', { fs });
+  assert.ok(fs.resolve('blank.txt') !== null);
+
+  executeLine('type nul > empty.txt', { fs });
+  assert.ok(fs.resolve('empty.txt') !== null);
+  assert.equal(fs.readFile('empty.txt'), '');
+});
+
+test('shell aliases (ls, pwd, cat, touch, cp, mv, notepad) execute naturally', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  const lsRes = executeLine('ls', { fs });
+  assert.ok(lsRes.ok);
+  assert.ok(lsRes.lines.some((l) => l.includes('notes.txt')));
+
+  const pwdRes = executeLine('pwd', { fs });
+  assert.ok(pwdRes.ok);
+  assert.equal(pwdRes.lines[0], 'C:\\Users\\student');
+
+  executeLine('touch draft.txt test.txt', { fs });
+  assert.ok(fs.resolve('draft.txt') !== null);
+  assert.ok(fs.resolve('test.txt') !== null);
+
+  const catRes = executeLine('cat notes.txt', { fs });
+  assert.ok(catRes.ok);
+  assert.ok(catRes.lines.some((l) => l.includes('remember to learn CMD')));
+
+  executeLine('cp notes.txt backup.txt', { fs });
+  assert.ok(fs.resolve('backup.txt') !== null);
+
+  executeLine('mv backup.txt renamed.txt', { fs });
+  assert.ok(fs.resolve('renamed.txt') !== null);
+  assert.equal(fs.resolve('backup.txt'), null);
+
+  const npRes = executeLine('notepad notes.txt', { fs });
+  assert.ok(npRes.ok);
+  assert.ok(npRes.lines.some((l) => l.includes('Notepad: opened')));
+});
+
+test('semantic goal verification accepts valid alternative commands and steps', async () => {
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  // intro-echo accepts any echo with text (not just strict "echo hello")
+  const echoDiff = fs.diffGoalWithCommands(
+    fs.serialize(),
+    fs.cwd,
+    ['echo hello'],
+    ['echo سلام دنیا', 'dir']
+  );
+  assert.ok(echoDiff.ok);
+
+  // intro-dir accepts dir variations or ls
+  const dirDiff = fs.diffGoalWithCommands(
+    fs.serialize(),
+    fs.cwd,
+    ['dir'],
+    ['ls', 'echo hi']
+  );
+  assert.ok(dirDiff.ok);
+
+  // intro-type accepts cat or more
+  const typeDiff = fs.diffGoalWithCommands(
+    fs.serialize(),
+    fs.cwd,
+    ['type notes.txt'],
+    ['cat notes.txt']
+  );
+  assert.ok(typeDiff.ok);
+
+  // date & time accepts running date and time separately in any order
+  const dateTimeDiff = fs.diffGoalWithCommands(
+    fs.serialize(),
+    fs.cwd,
+    ['date /t & time /t'],
+    ['dir', 'date /t', 'time /t']
+  );
+  assert.ok(dateTimeDiff.ok);
+});
+

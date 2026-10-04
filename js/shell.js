@@ -259,6 +259,16 @@ function executeSimple(segment, ctx, stdinText) {
     throw cmdError('The system cannot find the drive specified.');
   }
 
+  // echo. / echo/ / echo\ / echo, / echo; prints a blank line
+  if (/^echo[./\\,;]$/i.test(name)) {
+    if (redirect) {
+      if (redirect.mode === 'append') ctx.fs.appendFile(redirect.target, '\n');
+      else ctx.fs.writeFile(redirect.target, '\n');
+      return [];
+    }
+    return [''];
+  }
+
   // Batch script execution (CALL script.bat or direct script.bat / script.cmd)
   let scriptPath = null;
   let scriptArgs = [];

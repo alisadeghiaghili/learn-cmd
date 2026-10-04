@@ -437,6 +437,11 @@ class App {
   }
 
   syncHints() {
+    const files = this.fs ? this.fs.list(this.fs.cwd).map((n) => n.name) : [];
+    if (this.terminal && typeof this.terminal.setFileCompletions === 'function') {
+      this.terminal.setFileCompletions(files);
+    }
+
     if (this.mode !== 'level' || !this.level) {
       this.terminal.setHint('dir');
       this.terminal.setExtraCompletions([]);
@@ -498,13 +503,15 @@ class App {
     const learning = lvl.learning || [];
     const fieldNotes = lvl.fieldNotes || [];
 
+    const clickToFillTitle = escapeHtml(loc === 'fa' ? 'برای درج در خط فرمان کلیک کنید' : 'Click to fill into terminal');
+
     const nextBox = solved
       ? `<div class="next-box met">${escapeHtml(u.allSolutionMet)}</div>`
       : `<div class="next-box">
           <div class="next-title">${escapeHtml(u.typeNextTitle)}</div>
           <div class="next-row">
             <span class="g-label">${escapeHtml(u.remainingLabel)}</span>
-            <code class="g-cmd">${escapeHtml(lvl.solutionCommand)}</code>
+            <code class="g-cmd" data-fill="${escapeHtml(lvl.solutionCommand)}" style="cursor: pointer;" title="${clickToFillTitle}">${escapeHtml(lvl.solutionCommand)}</code>
           </div>
           <div class="par-note">${escapeHtml(u.wrongCommandNote)}</div>
         </div>`;
@@ -517,7 +524,7 @@ class App {
       const isCurrent = !solved && i === 0;
       const isMet = solved;
       return `<li class="${isMet ? 'met' : ''}${isCurrent ? ' current' : ''}">
-        <div class="g-label" dir="ltr">${isMet ? '✓' : isCurrent ? '▶' : '○'} <code>${escapeHtml(cmd)}</code>${
+        <div class="g-label" dir="ltr">${isMet ? '✓' : isCurrent ? '▶' : '○'} <code class="g-cmd" data-fill="${escapeHtml(cmd)}" style="cursor: pointer;" title="${clickToFillTitle}">${escapeHtml(cmd)}</code>${
           isCurrent ? ` <span class="chip current-chip">${escapeHtml(u.nowChip || 'now')}</span>` : ''
         }</div>
         <div class="g-detail">${escapeHtml(isMet ? (u.criterionMet || 'Criterion met') : (typeof u.runCommand === 'function' ? u.runCommand(cmd) : `run '${cmd}'`))}</div>
@@ -553,6 +560,17 @@ class App {
       <ul class="goal-list">${items.join('')}</ul>
       ${stateNotesHtml}
     `;
+
+    this.dockEl.querySelectorAll('[data-fill]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const cmdToFill = el.getAttribute('data-fill');
+        if (cmdToFill && this.terminal) {
+          this.terminal.inputEl.value = cmdToFill;
+          this.terminal.focus();
+          this.terminal.syncGhost();
+        }
+      });
+    });
   }
 
   handleCommand(raw) {

@@ -225,6 +225,11 @@ class VirtualFileSystem {
    * @returns {VfsNode | null}
    */
   resolve(path) {
+    if (!path) return this.resolve(this.cwd);
+    const trimmed = String(path).trim();
+    if (trimmed.toLowerCase() === 'nul' || trimmed.toLowerCase() === '\\nul') {
+      return createNode('nul', 'file', '');
+    }
     const norm = normalizePath(path, this.cwd);
     if (norm === ROOT_PATH) return this.root;
     const parts = norm.split('\\').slice(1);
@@ -283,6 +288,10 @@ class VirtualFileSystem {
    * @returns {VfsNode}
    */
   writeFile(path, content) {
+    const trimmed = String(path).trim();
+    if (trimmed.toLowerCase() === 'nul' || trimmed.toLowerCase() === '\\nul') {
+      return createNode('nul', 'file', '');
+    }
     const { parent, name } = splitPath(path, this.cwd);
     if (!name) {
       const err = new Error('The filename, directory name, or volume label syntax is incorrect.');
@@ -315,6 +324,10 @@ class VirtualFileSystem {
    * @returns {VfsNode}
    */
   appendFile(path, content) {
+    const trimmed = String(path).trim();
+    if (trimmed.toLowerCase() === 'nul' || trimmed.toLowerCase() === '\\nul') {
+      return createNode('nul', 'file', '');
+    }
     const node = this.resolve(path);
     if (node && node.type === 'file') {
       return this.writeFile(path, node.content + content);
@@ -542,6 +555,10 @@ class VirtualFileSystem {
    * @returns {string}
    */
   readFile(path) {
+    const trimmed = String(path).trim();
+    if (trimmed.toLowerCase() === 'nul' || trimmed.toLowerCase() === '\\nul') {
+      return '';
+    }
     const node = this.resolve(path);
     if (!node) {
       const err = new Error('The system cannot find the file specified.');
@@ -686,9 +703,10 @@ class VirtualFileSystem {
     /** @type {string[]} */
     const missingCommands = [];
     if (goalCommands && goalCommands.length) {
-      const ran = new Set((history || []).map((h) => normalizeCommand(h)));
       for (const need of goalCommands) {
-        if (!ran.has(normalizeCommand(need))) missingCommands.push(need);
+        if (!isGoalCommandSatisfied(need, history, this)) {
+          missingCommands.push(need);
+        }
       }
     }
     return {
@@ -784,6 +802,127 @@ function normalizeCommand(command) {
     .replace(/\s+/g, ' ')
     .replace(/"/g, '')
     .toLowerCase();
+}
+
+/**
+ * Test whether a goal command requirement is satisfied semantically by execution history or state.
+ *
+ * @param {string} need
+ * @param {string[]} history
+ * @param {VirtualFileSystem} fs
+ * @returns {boolean}
+ */
+export function isGoalCommandSatisfied(need, history, fs) {
+  const normNeed = normalizeCommand(need);
+  const rawHistory = history || [];
+  const ran = new Set(rawHistory.map((h) => normalizeCommand(h)));
+
+  // Direct match
+  if (ran.has(normNeed)) return true;
+
+  // Split chained need command (e.g. "date /t & time /t" or "cmd1 && cmd2")
+  const subNeeds = need.split(/[&|]+/).map((s) => s.trim()).filter(Boolean);
+  if (subNeeds.length > 1) {
+    const allSubMet = subNeeds.every((sn) => isGoalCommandSatisfied(sn, history, fs));
+    if (allSubMet) return true;
+  }
+
+  // 1. ECHO: any echo command with text
+  if (normNeed.startsWith('echo ')) {
+    return rawHistory.some((h) => /^echo\s+\S+/i.test(h.trim()));
+  }
+
+  // 2. DIR: any dir or ls command
+  if (normNeed === 'dir' || normNeed.startsWith('dir ')) {
+    return rawHistory.some((h) => /^(dir|ls)(\s+.*)?$/i.test(h.trim()));
+  }
+
+  // 3. TYPE: any type, more, or cat reading the specified file
+  if (normNeed.startsWith('type ')) {
+    const targetFile = normNeed.slice(5).trim();
+    const esc = targetFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return rawHistory.some((h) => new RegExp(`^(type|more|cat)\\s+.*${esc}`, 'i').test(h.trim()));
+  }
+
+  // 4. TREE: any tree command
+  if (normNeed === 'tree' || normNeed.startsWith('tree ')) {
+    return rawHistory.some((h) => /^tree(\s+.*)?$/i.test(h.trim()));
+  }
+
+  // 5. FC: any fc comparison of the two files
+  if (normNeed.startsWith('fc ')) {
+    return rawHistory.some((h) => /^fc\s+.*a\.txt.*b\.txt/i.test(h.trim()) || /^fc\s+.*b\.txt.*a\.txt/i.test(h.trim()));
+  }
+
+  // 6. FIND: searching for text in file
+  if (normNeed.startsWith('find ') || normNeed.startsWith('findstr ')) {
+    if (normNeed.includes('todo')) {
+      return rawHistory.some((h) => /^(find|findstr|grep)\s+.*todo.*notes\.txt/i.test(h.trim()));
+    }
+    if (normNeed.includes('error')) {
+      return rawHistory.some((h) => /^(find|findstr|grep)\s+.*error.*app\.log/i.test(h.trim()));
+    }
+    return rawHistory.some((h) => /^(find|findstr|grep)\s+/i.test(h.trim()));
+  }
+
+  // 7. DATE & TIME
+  if (normNeed.startsWith('date')) {
+    return rawHistory.some((h) => /^date(\s+.*)?$/i.test(h.trim()));
+  }
+  if (normNeed.startsWith('time')) {
+    return rawHistory.some((h) => /^time(\s+.*)?$/i.test(h.trim()));
+  }
+
+  // 8. ATTRIB: check attribute on file or command
+  if (normNeed.startsWith('attrib ')) {
+    const node = fs.resolve('config.ini') || fs.resolve('release\\app.js');
+    if (node && node.attrs && node.attrs.includes('R')) return true;
+    return rawHistory.some((h) => /^attrib\s+.*\+r/i.test(h.trim()));
+  }
+
+  // 9. TASKKILL: process killed or taskkill command
+  if (normNeed.startsWith('taskkill')) {
+    if (fs.processes && !fs.processes.some((p) => p.name.toLowerCase() === 'node.exe')) {
+      return true;
+    }
+    return rawHistory.some((h) => /^taskkill\s+.*node/i.test(h.trim()));
+  }
+
+  // 10. IF EXIST: lock file gone or condition executed
+  if (normNeed.startsWith('if exist')) {
+    if (normNeed.includes('lock.tmp')) {
+      return fs.resolve('lock.tmp') === null;
+    }
+    if (normNeed.includes('cache.tmp')) {
+      return fs.resolve('cache.tmp') === null;
+    }
+  }
+
+  // 11. PUSHD / POPD
+  if (normNeed.includes('pushd') && normNeed.includes('popd')) {
+    return fs.resolve('Documents\\bk.txt') !== null;
+  }
+
+  // 12. SORT
+  if (normNeed.startsWith('sort')) {
+    const node = fs.resolve('ranking.txt');
+    if (node && node.content) return true;
+    return rawHistory.some((h) => /sort\s+/i.test(h.trim()));
+  }
+
+  // 13. WHERE
+  if (normNeed.startsWith('where')) {
+    const node = fs.resolve('cmd_path.txt');
+    if (node && node.content) return true;
+    return rawHistory.some((h) => /^where\s+.*cmd/i.test(h.trim()));
+  }
+
+  // 14. FOR loops
+  if (normNeed.startsWith('for ')) {
+    return rawHistory.some((h) => /^for\s+/i.test(h.trim()));
+  }
+
+  return false;
 }
 
 export {

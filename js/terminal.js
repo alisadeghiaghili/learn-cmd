@@ -53,6 +53,17 @@ const BASE_COMMANDS = [
   'systeminfo',
   'clip',
   'xcopy src dest /s',
+  'robocopy src dest /s',
+  'ls',
+  'pwd',
+  'cat notes.txt',
+  'touch new.txt',
+  'notepad notes.txt',
+  'chcp 65001',
+  'start .',
+  'explorer .',
+  'powershell',
+  'cmd',
   'levels',
   'sandbox',
   'hint',
@@ -130,6 +141,8 @@ export class TerminalView {
     this.hint = '';
     /** @type {string[]} */
     this.extraCompletions = [];
+    /** @type {string[]} */
+    this.fileCompletions = [];
     /** @type {CanvasRenderingContext2D | null} */
     this.measureCtx = null;
 
@@ -223,6 +236,13 @@ export class TerminalView {
   }
 
   /**
+   * @param {string[]} names
+   */
+  setFileCompletions(names) {
+    this.fileCompletions = (names || []).filter(Boolean);
+  }
+
+  /**
    * @returns {string[]}
    */
   allCompletions() {
@@ -280,6 +300,11 @@ export class TerminalView {
     }
     for (const cmd of matches) {
       push(cmd.split(/\s+/)[head.length]);
+    }
+    if (head.length >= 1 && this.fileCompletions && this.fileCompletions.length) {
+      for (const fn of this.fileCompletions) {
+        push(fn);
+      }
     }
     return words.filter((w) => !current || w.toLowerCase().startsWith(current.toLowerCase()));
   }

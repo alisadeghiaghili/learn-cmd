@@ -1271,6 +1271,240 @@ export const COMMANDS = {
       return [`${copiedCount} File(s) copied`];
     },
   },
+
+  ls: {
+    usage: 'LS [path]',
+    help: 'Lists directory contents (alias for DIR).',
+    fn(args, ctx, raw) {
+      return COMMANDS.dir.fn(args, ctx, raw);
+    },
+  },
+
+  pwd: {
+    usage: 'PWD',
+    help: 'Prints current directory (alias for CD).',
+    fn(args, ctx, raw) {
+      return COMMANDS.cd.fn([], ctx, raw);
+    },
+  },
+
+  cat: {
+    usage: 'CAT [filename]',
+    help: 'Displays file contents (alias for TYPE).',
+    fn(args, ctx, raw) {
+      return COMMANDS.type.fn(args, ctx, raw);
+    },
+  },
+
+  clear: {
+    usage: 'CLEAR',
+    help: 'Clears the screen (alias for CLS).',
+    fn(args, ctx, raw) {
+      return COMMANDS.cls.fn(args, ctx, raw);
+    },
+  },
+
+  touch: {
+    usage: 'TOUCH filename...',
+    help: 'Creates an empty file.',
+    fn(args, ctx) {
+      if (!args || args.length === 0) throw cmdError('The syntax of the command is incorrect.');
+      for (const f of args) {
+        if (!ctx.fs.resolve(f)) {
+          ctx.fs.writeFile(f, '');
+        }
+      }
+      return [];
+    },
+  },
+
+  cp: {
+    usage: 'CP source destination',
+    help: 'Copies files (alias for COPY).',
+    fn(args, ctx, raw) {
+      return COMMANDS.copy.fn(args, ctx, raw);
+    },
+  },
+
+  mv: {
+    usage: 'MV source destination',
+    help: 'Moves files (alias for MOVE).',
+    fn(args, ctx, raw) {
+      return COMMANDS.move.fn(args, ctx, raw);
+    },
+  },
+
+  rm: {
+    usage: 'RM [/S] [/Q] target',
+    help: 'Removes files or directories (alias for DEL / RD).',
+    fn(args, ctx, raw) {
+      if (!args || args.length === 0) throw cmdError('The syntax of the command is incorrect.');
+      try {
+        return COMMANDS.del.fn(args, ctx, raw);
+      } catch {
+        return COMMANDS.rd.fn(args, ctx, raw);
+      }
+    },
+  },
+
+  grep: {
+    usage: 'GREP pattern [file]',
+    help: 'Searches for text in files (alias for FINDSTR).',
+    fn(args, ctx, raw) {
+      return COMMANDS.findstr.fn(args, ctx, raw);
+    },
+  },
+
+  man: {
+    usage: 'MAN command',
+    help: 'Displays command help (alias for HELP).',
+    fn(args, ctx, raw) {
+      return COMMANDS.help.fn(args, ctx, raw);
+    },
+  },
+
+  notepad: {
+    usage: 'NOTEPAD [filename]',
+    help: 'Opens a text file in Notepad.',
+    fn(args, ctx) {
+      if (!args || args.length === 0) return ['[Notepad opened with empty document]'];
+      const file = args[0];
+      const node = ctx.fs.resolve(file);
+      if (!node) {
+        ctx.fs.writeFile(file, '');
+        return [`[Notepad: created and opened "${file}"]`];
+      }
+      const lines = (node.content || '').split(/\r?\n/).filter(Boolean);
+      return [
+        `[Notepad: opened "${file}"]`,
+        '----------------------------------------',
+        ...(lines.length ? lines : ['(empty file)']),
+        '----------------------------------------',
+      ];
+    },
+  },
+
+  edit: {
+    usage: 'EDIT [filename]',
+    help: 'MS-DOS Editor (alias for NOTEPAD).',
+    fn(args, ctx, raw) {
+      return COMMANDS.notepad.fn(args, ctx, raw);
+    },
+  },
+
+  robocopy: {
+    usage: 'ROBOCOPY source destination [file [file]...] [options]',
+    help: 'Robust File and Folder Copy for Windows.',
+    fn(args, ctx, raw) {
+      const res = COMMANDS.xcopy.fn(args, ctx, raw);
+      return [
+        '-------------------------------------------------------------------------------',
+        '   ROBOCOPY     ::     Robust File Copy for Windows',
+        '-------------------------------------------------------------------------------',
+        ...res,
+        '               Total    Copied   Skipped  Mismatch    FAILED    Extras',
+        '    Dirs :         1         1         0         0         0         0',
+        '   Files :         1         1         0         0         0         0',
+        '   Speed :             1024000 Bytes/sec.',
+      ];
+    },
+  },
+
+  assoc: {
+    usage: 'ASSOC [.ext[=[fileType]]]',
+    help: 'Displays or modifies file extension associations.',
+    fn(args) {
+      if (args.length === 0) {
+        return ['.bat=batfile', '.cmd=cmdfile', '.ini=inifile', '.log=txtfile', '.txt=txtfile'];
+      }
+      const ext = args[0];
+      return [`${ext}=txtfile`];
+    },
+  },
+
+  ftype: {
+    usage: 'FTYPE [fileType[=[openCommandString]]]',
+    help: 'Displays or modifies file types used in file extension associations.',
+    fn(args) {
+      if (args.length === 0) {
+        return [
+          'batfile="%1" %*',
+          'cmdfile="%1" %*',
+          'txtfile=NOTEPAD.EXE %1',
+        ];
+      }
+      return [`${args[0]}=NOTEPAD.EXE %1`];
+    },
+  },
+
+  mode: {
+    usage: 'MODE [device] [/STATUS]',
+    help: 'Configures system devices.',
+    fn() {
+      return [
+        'Status for device CON:',
+        '----------------------',
+        '    Lines:          300',
+        '    Columns:        80',
+        '    Keyboard rate:  31',
+        '    Keyboard delay: 1',
+        '    Code page:      65001',
+      ];
+    },
+  },
+
+  chcp: {
+    usage: 'CHCP [nnn]',
+    help: 'Displays or sets the active code page number.',
+    fn(args, ctx) {
+      if (args.length === 0) return ['Active code page: 65001'];
+      ctx.fs.env.set('CODEPAGE', args[0]);
+      return [`Active code page: ${args[0]}`];
+    },
+  },
+
+  start: {
+    usage: 'START [title] [/D path] [options] "program" [parameters]',
+    help: 'Starts a separate window to run a specified program or document.',
+    fn(args, ctx) {
+      const target = args[0] || '.';
+      return [`[Started: ${target}]`];
+    },
+  },
+
+  explorer: {
+    usage: 'EXPLORER [path]',
+    help: 'Opens File Explorer.',
+    fn(args, ctx) {
+      const target = args[0] || ctx.fs.cwd;
+      return [`[Opening File Explorer at ${target}]`];
+    },
+  },
+
+  cmd: {
+    usage: 'CMD',
+    help: 'Starts a new instance of the Windows command interpreter.',
+    fn() {
+      return [
+        'Microsoft Windows [Version 10.0.19045.4170]',
+        '(c) Microsoft Corporation. All rights reserved.',
+        '',
+      ];
+    },
+  },
+
+  powershell: {
+    usage: 'POWERSHELL [command]',
+    help: 'Windows PowerShell interactive session.',
+    fn(args) {
+      if (args.length > 0) return [`PowerShell: executing "${args.join(' ')}"`];
+      return [
+        'Windows PowerShell',
+        'Copyright (C) Microsoft Corporation. All rights reserved.',
+        '',
+      ];
+    },
+  },
 };
 
 // Aliases commonly typed by Windows users
