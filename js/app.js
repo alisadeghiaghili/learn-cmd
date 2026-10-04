@@ -988,6 +988,14 @@ class App {
               </div>
               <p class="quality-desc">این دوره از صفر مطلق شروع شده و تا سطح کامل پروداکشن و اتوماسیون پیش می‌رود؛ بدون نیاز به پیش‌زمینه قبلی تا تسلط بر صفات فایل، پردازش‌ها و اسکریپت‌های شرطی.</p>
             </div>
+            <div class="learning-box">
+              <div class="next-title">چرا یادگیری CMD اهمیت دارد و به چه درد می‌خورد؟</div>
+              <ul>
+                <li><strong>سرعت و اتوماسیون:</strong> انجام کارهای تکراری و مدیریت انبوه فایل‌ها در چند ثانیه به‌جای کار خسته‌کننده با ماوس.</li>
+                <li><strong>سرورها، داکر و DevOps:</strong> کنترل سیستم‌های بدون رابط گرافیکی (Headless)، کانتینرها و پایپ‌لاین‌های CI/CD.</li>
+                <li><strong>عیب‌یابی پیشرفته و نجات سیستم:</strong> دسترسی مستقیم به شبکه، پروسه‌ها و سیستم‌عامل زمانی که رابط گرافیکی کرش می‌کند.</li>
+              </ul>
+            </div>
             <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
             <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
             <p><strong>۲۹</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
@@ -1001,6 +1009,14 @@ class App {
               </div>
               <p class="quality-desc">Vollkommen praxisnah vom absoluten Nullpunkt bis zur echten Produktions-Automatisierung mit Dateiattributen, Prozesssteuerung und bedingten Skripten.</p>
             </div>
+            <div class="learning-box">
+              <div class="next-title">Warum CMD wichtig ist und wozu man es braucht:</div>
+              <ul>
+                <li><strong>Geschwindigkeit & Automatisierung:</strong> Massenoperationen sekundenschnell ohne Maus erledigen.</li>
+                <li><strong>Server, Docker & DevOps:</strong> Unerlässlich für Headless-Server, Container und CI/CD-Pipelines.</li>
+                <li><strong>Systemdiagnose & Wiederherstellung:</strong> Direkter Zugriff auf Prozesse und Netzwerk bei GUI-Ausfällen.</li>
+              </ul>
+            </div>
             <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
             <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
             <p><strong>29</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
@@ -1013,6 +1029,14 @@ class App {
                 <span class="q-badge">🎓 <strong>Instruction Quality:</strong> ≥ 8.5 / 10</span>
               </div>
               <p class="quality-desc">Designed to be completely hands-on, zero-fluff, taking beginners with zero knowledge all the way to production scripting, process control, and file security.</p>
+            </div>
+            <div class="learning-box">
+              <div class="next-title">Why CMD is important and where it is used:</div>
+              <ul>
+                <li><strong>Speed & Automation:</strong> Execute bulk file tasks and workflows in seconds rather than repetitive clicking.</li>
+                <li><strong>Servers, Docker & CI/CD:</strong> The foundation for headless cloud servers, containers, and automated pipelines.</li>
+                <li><strong>Deep System Diagnostics:</strong> Low-level network, process, and repair access when graphical Windows crashes.</li>
+              </ul>
             </div>
             <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
             <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
