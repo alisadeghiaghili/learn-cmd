@@ -250,30 +250,109 @@ function executeSimple(segment, ctx, stdinText) {
   let name = expandedTokens[0];
   const args = expandedTokens.slice(1);
 
+  // Drive selection e.g. "C:" or "c:\"
+  if (/^[a-zA-Z]:\\?$/.test(name)) {
+    const driveLetter = name[0].toUpperCase();
+    if (driveLetter === 'C') {
+      return [];
+    }
+    throw cmdError('The system cannot find the drive specified.');
+  }
+
   // Batch script execution (CALL script.bat or direct script.bat / script.cmd)
   let scriptPath = null;
+  let scriptArgs = [];
   if (name.toLowerCase() === 'call' && args.length > 0) {
     scriptPath = args[0];
+    scriptArgs = args.slice(1);
   } else if (name.toLowerCase().endsWith('.bat') || name.toLowerCase().endsWith('.cmd')) {
     scriptPath = name;
+    scriptArgs = args;
   } else if (!lookupCommand(name)) {
-    if (ctx.fs.resolve(name + '.bat')) scriptPath = name + '.bat';
-    else if (ctx.fs.resolve(name + '.cmd')) scriptPath = name + '.cmd';
+    if (ctx.fs.resolve(name + '.bat')) {
+      scriptPath = name + '.bat';
+      scriptArgs = args;
+    } else if (ctx.fs.resolve(name + '.cmd')) {
+      scriptPath = name + '.cmd';
+      scriptArgs = args;
+    }
   }
 
   if (scriptPath && ctx.fs.resolve(scriptPath)) {
     const content = ctx.fs.readFile(scriptPath);
-    const scriptLines = content.split(/\r?\n/);
+    const rawLines = content.split(/\r?\n/);
     const outLines = [];
-    for (const sLine of scriptLines) {
-      const t = sLine.trim();
-      if (!t || t.toLowerCase() === '@echo off' || t.toLowerCase().startsWith('rem ') || t.startsWith('::')) {
+
+    // Pre-scan labels (:label_name)
+    const labelIndices = new Map();
+    for (let i = 0; i < rawLines.length; i += 1) {
+      const trimmedLine = rawLines[i].trim();
+      if (trimmedLine.startsWith(':') && !trimmedLine.startsWith('::')) {
+        const lbl = trimmedLine.slice(1).trim().split(/\s+/)[0].toLowerCase();
+        if (lbl && !labelIndices.has(lbl)) {
+          labelIndices.set(lbl, i);
+        }
+      }
+    }
+
+    let pc = 0;
+    let iterations = 0;
+    const maxIterations = 2000;
+
+    while (pc < rawLines.length && iterations < maxIterations) {
+      iterations += 1;
+      const sLine = rawLines[pc];
+      pc += 1;
+      let t = sLine.trim();
+
+      // Skip empty lines, comments, labels
+      if (!t || t.toLowerCase() === '@echo off' || t.toLowerCase().startsWith('rem ') || t.startsWith('::') || t.startsWith(':')) {
         continue;
       }
-      const res = executeLine(t, ctx);
+
+      // Replace batch parameters %0..%9, %*
+      t = t.replace(/%0/g, scriptPath);
+      t = t.replace(/%\*/g, scriptArgs.join(' '));
+      for (let p = 1; p <= 9; p += 1) {
+        const val = scriptArgs[p - 1] !== undefined ? scriptArgs[p - 1] : '';
+        const re = new RegExp(`%~?${p}`, 'g');
+        t = t.replace(re, val.replace(/^"|"$/g, ''));
+      }
+
+      // Check for standalone GOTO
+      const gotoMatch = t.match(/^goto\s+:?([a-zA-Z0-9_\-]+)$/i);
+      if (gotoMatch) {
+        const targetLabel = gotoMatch[1].toLowerCase();
+        if (targetLabel === 'eof') break;
+        if (labelIndices.has(targetLabel)) {
+          pc = labelIndices.get(targetLabel) + 1;
+          continue;
+        } else {
+          outLines.push(`The system cannot find the batch label specified - ${gotoMatch[1]}`);
+          break;
+        }
+      }
+
+      const batchCtx = { ...ctx, inBatch: true };
+      const res = executeLine(t, batchCtx);
+      const gotoSignal = res.lines.find((l) => l.startsWith('__GOTO__:'));
+      if (gotoSignal) {
+        const actualLines = res.lines.filter((l) => !l.startsWith('__GOTO__:'));
+        outLines.push(...actualLines);
+        const targetLabel = gotoSignal.replace('__GOTO__:', '').trim().replace(/^:/, '').toLowerCase();
+        if (targetLabel === 'eof') break;
+        if (labelIndices.has(targetLabel)) {
+          pc = labelIndices.get(targetLabel) + 1;
+          continue;
+        } else {
+          outLines.push(`The system cannot find the batch label specified - ${targetLabel}`);
+          break;
+        }
+      }
       outLines.push(...res.lines);
       if (!res.ok) break;
     }
+
     if (redirect) {
       const text = outLines.join('\n') + (outLines.length ? '\n' : '');
       if (redirect.mode === 'append') {

@@ -607,11 +607,61 @@ export const COMMANDS = {
   },
 
   set: {
-    usage: 'SET [variable=[string]]',
+    usage: 'SET [variable=[string]]\nSET /A expression',
     help: 'Displays, sets, or removes CMD.EXE environment variables.',
     fn(args, ctx) {
       if (args.length === 0) {
         return [...ctx.fs.env.entries()].map(([k, v]) => `${k}=${v}`).sort();
+      }
+      if (args[0].toLowerCase() === '/a') {
+        const exprRaw = args.slice(1).join(' ').trim().replace(/^"|"$/g, '');
+        if (!exprRaw) throw cmdError('The syntax of the command is incorrect.');
+        const subExprs = exprRaw.split(',').map((s) => s.trim()).filter(Boolean);
+        const results = [];
+        for (const sub of subExprs) {
+          let targetVar = null;
+          let mathStr = sub;
+          const compoundMatch = sub.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*([+\-*/%])=\s*(.+)$/);
+          if (compoundMatch) {
+            targetVar = compoundMatch[1];
+            const op = compoundMatch[2];
+            const rightExpr = compoundMatch[3];
+            mathStr = `(${targetVar}) ${op} (${rightExpr})`;
+          } else {
+            const eq = sub.indexOf('=');
+            if (eq > 0) {
+              targetVar = sub.slice(0, eq).trim();
+              mathStr = sub.slice(eq + 1).trim();
+            }
+          }
+          const substituted = mathStr.replace(/[a-zA-Z_][a-zA-Z0-9_]*/g, (match) => {
+            const v = ctx.fs.env.get(match);
+            if (v != null && !Number.isNaN(Number(v))) return String(Math.trunc(Number(v)));
+            const lowerMatch = [...ctx.fs.env.keys()].find((k) => k.toLowerCase() === match.toLowerCase());
+            if (lowerMatch != null) {
+              const lv = ctx.fs.env.get(lowerMatch);
+              if (lv != null && !Number.isNaN(Number(lv))) return String(Math.trunc(Number(lv)));
+            }
+            return '0';
+          });
+          if (!/^[0-9+\-*/%()\s]+$/.test(substituted)) {
+            throw cmdError('Missing operand.');
+          }
+          let computed;
+          try {
+            computed = Math.trunc(Number(Function('"use strict"; return (' + substituted + ')')()));
+            if (Number.isNaN(computed) || !Number.isFinite(computed)) {
+              computed = 0;
+            }
+          } catch {
+            throw cmdError('Missing operand.');
+          }
+          if (targetVar) {
+            ctx.fs.env.set(targetVar, String(computed));
+          }
+          results.push(String(computed));
+        }
+        return results;
       }
       const raw = args.join(' ');
       const eq = raw.indexOf('=');
@@ -902,6 +952,323 @@ export const COMMANDS = {
     help: 'Calls one batch program from another.',
     fn() {
       return ['The syntax of the command is incorrect.'];
+    },
+  },
+
+  goto: {
+    usage: 'GOTO label',
+    help: 'Directs CMD.EXE to a labeled line in a batch program.',
+    fn(args, ctx) {
+      if (!args || args.length === 0) return ['The syntax of the command is incorrect.'];
+      const lbl = args[0].replace(/^:/, '');
+      if (ctx && ctx.inBatch) {
+        return [`__GOTO__:${lbl}`];
+      }
+      return [`The system cannot find the batch label specified - ${lbl}`];
+    },
+  },
+
+  ipconfig: {
+    usage: 'IPCONFIG [/all | /release | /renew | /flushdns]',
+    help: 'Displays all current TCP/IP network configuration values.',
+    fn(args) {
+      const arg = (args[0] || '').toLowerCase();
+      if (arg === '/flushdns') {
+        return [
+          '',
+          'Windows IP Configuration',
+          '',
+          'Successfully flushed the DNS Resolver Cache.',
+        ];
+      }
+      if (arg === '/release') {
+        return [
+          '',
+          'Windows IP Configuration',
+          '',
+          'Ethernet adapter Ethernet:',
+          '',
+          '   Connection-specific DNS Suffix  . : localdomain',
+          '   IPv4 Address. . . . . . . . . . . : 0.0.0.0',
+          '   Subnet Mask . . . . . . . . . . . : 0.0.0.0',
+          '   Default Gateway . . . . . . . . . : ',
+        ];
+      }
+      if (arg === '/all') {
+        return [
+          '',
+          'Windows IP Configuration',
+          '',
+          '   Host Name . . . . . . . . . . . . : DESKTOP-CMD',
+          '   Primary Dns Suffix  . . . . . . . : ',
+          '   Node Type . . . . . . . . . . . . : Hybrid',
+          '   IP Routing Enabled. . . . . . . . : No',
+          '   WINS Proxy Enabled. . . . . . . . : No',
+          '   DNS Suffix Search List. . . . . . : localdomain',
+          '',
+          'Ethernet adapter Ethernet:',
+          '',
+          '   Connection-specific DNS Suffix  . : localdomain',
+          '   Description . . . . . . . . . . . : Intel(R) Ethernet Connection (2) I219-V',
+          '   Physical Address. . . . . . . . . : 00-15-5D-82-41-9F',
+          '   DHCP Enabled. . . . . . . . . . . : Yes',
+          '   Autoconfiguration Enabled . . . . : Yes',
+          '   Link-local IPv6 Address . . . . . : fe80::a1b2:c3d4:e5f6:7890%12(Preferred)',
+          '   IPv4 Address. . . . . . . . . . . : 192.168.1.105(Preferred)',
+          '   Subnet Mask . . . . . . . . . . . : 255.255.255.0',
+          '   Lease Obtained. . . . . . . . . . : Monday, October 5, 2026 8:00:00 AM',
+          '   Lease Expires . . . . . . . . . . : Tuesday, October 6, 2026 8:00:00 AM',
+          '   Default Gateway . . . . . . . . . : 192.168.1.1',
+          '   DHCP Server . . . . . . . . . . . : 192.168.1.1',
+          '   DNS Servers . . . . . . . . . . . : 8.8.8.8',
+          '                                       1.1.1.1',
+        ];
+      }
+      return [
+        '',
+        'Windows IP Configuration',
+        '',
+        'Ethernet adapter Ethernet:',
+        '',
+        '   Connection-specific DNS Suffix  . : localdomain',
+        '   Link-local IPv6 Address . . . . . : fe80::a1b2:c3d4:e5f6:7890%12',
+        '   IPv4 Address. . . . . . . . . . . : 192.168.1.105',
+        '   Subnet Mask . . . . . . . . . . . : 255.255.255.0',
+        '   Default Gateway . . . . . . . . . : 192.168.1.1',
+      ];
+    },
+  },
+
+  ping: {
+    usage: 'PING [-t] [-a] [-n count] [-l size] target_name',
+    help: 'Verifies IP-level connectivity to another computer.',
+    fn(args) {
+      const nonFlags = args.filter((a) => !a.startsWith('-') && !a.startsWith('/'));
+      if (nonFlags.length === 0) {
+        return ['Usage: ping [-t] [-a] [-n count] [-l size] target_name'];
+      }
+      const host = nonFlags[0];
+      const ip = /^(\d{1,3}\.){3}\d{1,3}$/.test(host) ? host : '93.184.216.34';
+      return [
+        '',
+        `Pinging ${host} [${ip}] with 32 bytes of data:`,
+        `Reply from ${ip}: bytes=32 time=14ms TTL=117`,
+        `Reply from ${ip}: bytes=32 time=15ms TTL=117`,
+        `Reply from ${ip}: bytes=32 time=14ms TTL=117`,
+        `Reply from ${ip}: bytes=32 time=16ms TTL=117`,
+        '',
+        `Ping statistics for ${ip}:`,
+        `    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),`,
+        `Approximate round trip times in milli-seconds:`,
+        `    Minimum = 14ms, Maximum = 16ms, Average = 15ms`,
+      ];
+    },
+  },
+
+  whoami: {
+    usage: 'WHOAMI [/user] [/priv] [/all]',
+    help: 'Displays the current user, group, and privileges.',
+    fn(args, ctx) {
+      const user = ctx.fs.env.get('USERNAME') || 'student';
+      const domain = ctx.fs.env.get('USERDOMAIN') || 'desktop-cmd';
+      const full = `${domain}\\${user}`.toLowerCase();
+      const flag = (args[0] || '').toLowerCase();
+      if (flag === '/user') {
+        return [
+          '',
+          'USER INFORMATION',
+          '----------------',
+          '',
+          'User Name             SID',
+          '===================== =============================================',
+          `${pad(full, 21)} S-1-5-21-3623811015-3361044348-30300820-1001`,
+        ];
+      }
+      return [full];
+    },
+  },
+
+  hostname: {
+    usage: 'HOSTNAME',
+    help: 'Prints the name of the current host.',
+    fn(_args, ctx) {
+      return [ctx.fs.env.get('COMPUTERNAME') || 'DESKTOP-CMD'];
+    },
+  },
+
+  systeminfo: {
+    usage: 'SYSTEMINFO [/S system [/U username [/P [password]]]] [/FO format]',
+    help: 'Displays machine-specific properties and configuration.',
+    fn(_args, ctx) {
+      const host = ctx.fs.env.get('COMPUTERNAME') || 'DESKTOP-CMD';
+      return [
+        '',
+        `Host Name:                 ${host}`,
+        'OS Name:                   Microsoft Windows 11 Pro',
+        'OS Version:                10.0.22631 N/A Build 22631',
+        'OS Manufacturer:           Microsoft Corporation',
+        'OS Configuration:          Standalone Workstation',
+        'OS Build Type:             Multiprocessor Free',
+        'Product ID:                00330-80000-00000-AA123',
+        'Original Install Date:     10/1/2026, 10:15:30 AM',
+        'System Boot Time:          10/4/2026, 8:00:00 AM',
+        'System Manufacturer:       Learn-CMD Virtual Platform',
+        'System Model:              Virtual Machine',
+        'System Type:               x64-based PC',
+        'Processor(s):              1 Processor(s) Installed.',
+        '                           [01]: Intel64 Family 6 Model 158 ~3.0 GHz',
+        'BIOS Version:              VIRTUAL - 1000',
+        'Windows Directory:         C:\\Windows',
+        'System Directory:          C:\\Windows\\System32',
+        'Boot Device:               \\Device\\HarddiskVolume1',
+        'System Locale:             en-us;English (United States)',
+        'Input Locale:              en-us;English (United States)',
+        'Time Zone:                 (UTC+03:30) Tehran',
+        'Total Physical Memory:     16,384 MB',
+        'Available Physical Memory: 11,240 MB',
+        'Virtual Memory: Max Size:  18,432 MB',
+        'Virtual Memory: Available: 13,100 MB',
+        'Domain:                    WORKGROUP',
+        'Logon Server:              \\\\DESKTOP-CMD',
+        'Hotfix(s):                 2 Hotfix(s) Installed.',
+        '                           [01]: KB5031354',
+        '                           [02]: KB5031455',
+        'Network Card(s):           1 NIC(s) Installed.',
+        '                           [01]: Intel(R) Ethernet Connection',
+      ];
+    },
+  },
+
+  clip: {
+    usage: 'CLIP',
+    help: 'Redirects command line output to the Windows clipboard.',
+    fn(_args, ctx) {
+      if (ctx.stdin != null) {
+        ctx.fs.clipboard = ctx.stdin;
+      }
+      return [];
+    },
+  },
+
+  color: {
+    usage: 'COLOR [attr]',
+    help: 'Sets the default console foreground and background colors.',
+    fn(args, ctx) {
+      if (args.length === 0) {
+        ctx.fs.env.delete('COLOR');
+        return [];
+      }
+      const attr = args[0];
+      ctx.fs.env.set('COLOR', attr);
+      return [];
+    },
+  },
+
+  curl: {
+    usage: 'CURL [options...] <url>',
+    help: 'Transfers data from or to a server.',
+    fn(args) {
+      const urls = args.filter((a) => !a.startsWith('-'));
+      if (urls.length === 0) throw cmdError('curl: try \'curl --help\' for more information');
+      const target = urls[0];
+      if (target.includes('api.github.com') || target.includes('json')) {
+        return [
+          '{',
+          '  "status": "success",',
+          '  "message": "learn-cmd simulation response",',
+          `  "target": "${target}"`,
+          '}',
+        ];
+      }
+      return [
+        '<!DOCTYPE html>',
+        '<html>',
+        '<head><title>Learn CMD</title></head>',
+        `<body><h1>Response from ${target}</h1></body>`,
+        '</html>',
+      ];
+    },
+  },
+
+  timeout: {
+    usage: 'TIMEOUT [/T] timeout [/NOBREAK]',
+    help: 'Pauses the command processor for the specified number of seconds.',
+    fn(args) {
+      const num = args.find((a) => /^\d+$/.test(a)) || '5';
+      return [`Waiting for ${num} seconds, press a KEY to continue ...`];
+    },
+  },
+
+  xcopy: {
+    usage: 'XCOPY source [destination] [/A | /M] [/D[:date]] [/P] [/S [/E]] [/V] [/W] [/C] [/I] [/Q] [/F] [/L] [/G] [/H] [/R] [/T] [/U] [/K] [/N] [/O] [/X] [/Y] [/-Y] [/Z] [/B] [/J]',
+    help: 'Copies files and directory trees.',
+    fn(args, ctx) {
+      const { flags, rest } = parseFlags(args);
+      if (rest.length === 0) throw cmdError('Invalid number of parameters');
+      const src = rest[0];
+      const dest = rest[1] || '.';
+      const recurse = flags.has('s') || flags.has('e');
+      const copyEmpty = flags.has('e');
+
+      const srcPath = normalizePath(src, ctx.fs.cwd);
+      const destPath = normalizePath(dest, ctx.fs.cwd);
+      const srcNode = ctx.fs.resolve(srcPath);
+
+      let copiedCount = 0;
+      const copyRec = (currSrcPath, currDestPath) => {
+        const node = ctx.fs.resolve(currSrcPath);
+        if (!node) return;
+        if (node.type === 'file') {
+          ctx.fs.writeFile(currDestPath, node.content);
+          copiedCount += 1;
+        } else if (node.type === 'dir') {
+          const children = [...node.children.values()];
+          if (children.length === 0 && copyEmpty) {
+            ctx.fs.ensurePath(currDestPath);
+          }
+          for (const child of children) {
+            const childSrc = currSrcPath + '\\' + child.name;
+            const childDest = currDestPath + '\\' + child.name;
+            if (child.type === 'file') {
+              ctx.fs.writeFile(childDest, child.content);
+              copiedCount += 1;
+            } else if (child.type === 'dir' && recurse) {
+              ctx.fs.ensurePath(childDest);
+              copyRec(childSrc, childDest);
+            }
+          }
+        }
+      };
+
+      if (!srcNode) {
+        const { parent, name } = splitPath(srcPath);
+        const parentNode = ctx.fs.resolveDir(parent);
+        const re = globToRegExp(name || '*');
+        const matches = [...parentNode.children.values()].filter((n) => re.test(n.name));
+        if (matches.length === 0) throw cmdError('File not found - ' + name);
+        ctx.fs.ensurePath(destPath);
+        for (const m of matches) {
+          if (m.type === 'file') {
+            ctx.fs.writeFile(destPath + '\\' + m.name, m.content);
+            copiedCount += 1;
+          } else if (m.type === 'dir' && recurse) {
+            copyRec(parent + '\\' + m.name, destPath + '\\' + m.name);
+          }
+        }
+      } else if (srcNode.type === 'file') {
+        const destNode = ctx.fs.resolve(destPath);
+        let targetFile = destPath;
+        if (destNode && destNode.type === 'dir') {
+          targetFile = destPath + '\\' + srcNode.name;
+        }
+        ctx.fs.writeFile(targetFile, srcNode.content);
+        copiedCount = 1;
+      } else {
+        ctx.fs.ensurePath(destPath);
+        copyRec(srcPath, destPath);
+      }
+
+      return [`${copiedCount} File(s) copied`];
     },
   },
 };

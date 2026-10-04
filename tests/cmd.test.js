@@ -561,3 +561,111 @@ test('batch file execution runs .bat scripts line by line', async () => {
   assert.equal(fs.resolve('dist\\main.js') !== null, true);
 });
 
+test('set /a evaluates arithmetic expressions and compounds', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  const res1 = executeLine('set /a count=5+10', { fs });
+  assert.ok(res1.ok);
+  assert.equal(fs.env.get('count'), '15');
+  assert.equal(res1.lines[0], '15');
+
+  const res2 = executeLine('set /a count+=5', { fs });
+  assert.ok(res2.ok);
+  assert.equal(fs.env.get('count'), '20');
+
+  const res3 = executeLine('set /a result=(4 + 6) * 3', { fs });
+  assert.ok(res3.ok);
+  assert.equal(fs.env.get('result'), '30');
+});
+
+test('networking, system, and clipboard commands produce valid Windows output', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  const ipRes = executeLine('ipconfig', { fs });
+  assert.ok(ipRes.ok);
+  assert.ok(ipRes.lines.some((l) => l.includes('IPv4 Address')));
+
+  const pingRes = executeLine('ping 8.8.8.8', { fs });
+  assert.ok(pingRes.ok);
+  assert.ok(pingRes.lines.some((l) => l.includes('Reply from 8.8.8.8')));
+
+  const whoRes = executeLine('whoami', { fs });
+  assert.ok(whoRes.ok);
+  assert.equal(whoRes.lines[0], 'desktop-cmd\\student');
+
+  const hostRes = executeLine('hostname', { fs });
+  assert.ok(hostRes.ok);
+  assert.equal(hostRes.lines[0], 'DESKTOP-CMD');
+
+  const sysRes = executeLine('systeminfo', { fs });
+  assert.ok(sysRes.ok);
+  assert.ok(sysRes.lines.some((l) => l.includes('Microsoft Windows 11')));
+
+  const clipRes = executeLine('echo secretText | clip', { fs });
+  assert.ok(clipRes.ok);
+  assert.equal(fs.clipboard, 'secretText');
+
+  const driveRes = executeLine('c:', { fs });
+  assert.ok(driveRes.ok);
+});
+
+test('xcopy recursively copies directories and files', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem({
+    Users: {
+      student: {
+        project: {
+          'index.html': '<h1>Hi</h1>',
+          sub: {
+            'style.css': 'body{}',
+          },
+        },
+      },
+    },
+  });
+  fs.cwd = 'C:\\Users\\student';
+
+  const xRes = executeLine('xcopy project backup /s /e', { fs });
+  assert.ok(xRes.ok);
+  assert.ok(fs.resolve('backup\\index.html') !== null);
+  assert.ok(fs.resolve('backup\\sub\\style.css') !== null);
+  assert.equal(fs.readFile('backup\\sub\\style.css'), 'body{}');
+});
+
+test('batch scripts support arguments %1..%9, %*, and GOTO labels', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem({
+    Users: {
+      student: {
+        'deploy.bat': [
+          '@echo off',
+          'if "%1"=="prod" goto runProd',
+          'echo Running dev mode',
+          'goto end',
+          ':runProd',
+          'echo Deploying to production %2',
+          ':end',
+          'echo Done',
+        ].join('\n'),
+      },
+    },
+  });
+  fs.cwd = 'C:\\Users\\student';
+
+  const devRes = executeLine('deploy.bat dev', { fs });
+  assert.ok(devRes.ok);
+  assert.deepEqual(devRes.lines, ['Running dev mode', 'Done']);
+
+  const prodRes = executeLine('deploy.bat prod v2.0', { fs });
+  assert.ok(prodRes.ok);
+  assert.deepEqual(prodRes.lines, ['Deploying to production v2.0', 'Done']);
+});
+
