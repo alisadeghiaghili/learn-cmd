@@ -564,12 +564,29 @@ class VirtualFileSystem {
    */
   expandEnv(text) {
     return text.replace(/%([^%]+)%/g, (match, name) => {
-      const key = String(name);
-      if (this.env.has(key)) return this.env.get(key);
-      const lower = [...this.env.keys()].find((k) => k.toLowerCase() === key.toLowerCase());
-      if (lower) return this.env.get(lower);
+      const val = this.getEnv(name);
+      if (val !== null) return val;
+      if (String(name).toLowerCase() === 'errorlevel') return '0';
       return match;
     });
+  }
+
+  /**
+   * @param {string} name
+   * @returns {string | null}
+   */
+  getEnv(name) {
+    if (this.env.has(name)) return this.env.get(name) ?? null;
+    const lower = [...this.env.keys()].find((k) => k.toLowerCase() === name.toLowerCase());
+    return lower ? this.env.get(lower) ?? null : null;
+  }
+
+  /**
+   * @param {string} name
+   * @param {string} value
+   */
+  setEnv(name, value) {
+    this.env.set(name, String(value));
   }
 
   /**

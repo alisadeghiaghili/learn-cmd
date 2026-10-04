@@ -504,3 +504,60 @@ test('date /t and time /t output formatted date and time', async () => {
   assert.ok(chainedRes.ok);
   assert.equal(chainedRes.lines.length, 2);
 });
+
+test('FOR loops iterate over sets and wildcards', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem({
+    Users: {
+      student: {
+        'a.log': '1',
+        'b.log': '2',
+        archive: {},
+      },
+    },
+  });
+  fs.cwd = 'C:\\Users\\student';
+
+  const loopRes = executeLine('for %f in (*.log) do move %f archive', { fs });
+  assert.ok(loopRes.ok);
+  assert.equal(fs.resolve('archive\\a.log') !== null, true);
+  assert.equal(fs.resolve('archive\\b.log') !== null, true);
+  assert.equal(fs.resolve('a.log'), null);
+
+  const rangeRes = executeLine('for /l %i in (1, 1, 3) do md dir%i', { fs });
+  assert.ok(rangeRes.ok);
+  assert.equal(fs.resolve('dir1') !== null, true);
+  assert.equal(fs.resolve('dir2') !== null, true);
+  assert.equal(fs.resolve('dir3') !== null, true);
+});
+
+test('ERRORLEVEL tracks exit codes and supports IF ERRORLEVEL', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem({ Users: { student: { 'server.log': 'FAIL: timeout\n' } } });
+  fs.cwd = 'C:\\Users\\student';
+
+  executeLine('find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt', { fs });
+  assert.equal(fs.readFile('alert.txt'), 'alert\n');
+
+  executeLine('unknownCommand', { fs });
+  assert.equal(fs.getEnv('ERRORLEVEL'), '1');
+  executeLine('if errorlevel 1 echo failed>err.txt', { fs });
+  assert.equal(fs.readFile('err.txt'), 'failed\n');
+});
+
+test('batch file execution runs .bat scripts line by line', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem({ Users: { student: { src: { 'main.js': 'code\n' } } } });
+  fs.cwd = 'C:\\Users\\student';
+
+  executeLine('echo md dist>build.bat & echo copy src\\main.js dist>>build.bat', { fs });
+  assert.ok(fs.resolve('build.bat') !== null);
+
+  const runRes = executeLine('build.bat', { fs });
+  assert.ok(runRes.ok);
+  assert.equal(fs.resolve('dist\\main.js') !== null, true);
+});
+

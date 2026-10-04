@@ -164,9 +164,127 @@ function executeSimple(segment, ctx, stdinText) {
     return [];
   }
 
+  const ifErrorMatch = expanded.match(/^if\s+(not\s+)?errorlevel\s+(\d+)\s+(.+)$/i);
+  if (ifErrorMatch) {
+    const isNot = Boolean(ifErrorMatch[1]);
+    const threshold = parseInt(ifErrorMatch[2], 10);
+    const thenCmd = ifErrorMatch[3];
+    const currentCode = parseInt(ctx.fs.getEnv('ERRORLEVEL') || '0', 10);
+    const cond = isNot ? currentCode < threshold : currentCode >= threshold;
+    if (cond) {
+      const out = executePipeline(thenCmd, ctx);
+      if (redirect) {
+        const text = out.join('\n') + (out.length ? '\n' : '');
+        if (redirect.mode === 'append') {
+          ctx.fs.appendFile(redirect.target, text);
+        } else {
+          ctx.fs.writeFile(redirect.target, text);
+        }
+        return [];
+      }
+      return out;
+    }
+    return [];
+  }
+
+  // FOR command support: FOR [%/%%]var IN (set) DO command
+  const forMatch = command.match(/^for\s+(\/l\s+)?(%{1,2}[a-zA-Z0-9_])\s+in\s*\(([^)]+)\)\s+do\s+(.+)$/i);
+  if (forMatch) {
+    const isRange = Boolean(forMatch[1]);
+    const varToken = forMatch[2];
+    const rawSet = forMatch[3].trim();
+    const doCmd = forMatch[4].trim();
+
+    let items = [];
+    if (isRange) {
+      const nums = rawSet.split(/[,\s]+/).map((n) => parseInt(n.trim(), 10)).filter((n) => !Number.isNaN(n));
+      if (nums.length >= 3) {
+        const [start, step, end] = nums;
+        if (step > 0) {
+          for (let val = start; val <= end; val += step) items.push(String(val));
+        } else if (step < 0) {
+          for (let val = start; val >= end; val += step) items.push(String(val));
+        }
+      }
+    } else {
+      const tokens = rawSet.split(/[,\s]+/).filter(Boolean);
+      for (const token of tokens) {
+        if (token.includes('*') || token.includes('?')) {
+          try {
+            const matches = ctx.fs.list(ctx.fs.cwd, token);
+            if (matches.length > 0) {
+              for (const m of matches) items.push(m.name);
+            } else {
+              items.push(token);
+            }
+          } catch {
+            items.push(token);
+          }
+        } else {
+          items.push(token);
+        }
+      }
+    }
+
+    const outLines = [];
+    const varRegex = new RegExp(varToken.replace(/%/g, '\\%'), 'gi');
+    for (const item of items) {
+      const subCmd = doCmd.replace(varRegex, item);
+      const res = executePipeline(subCmd, ctx);
+      outLines.push(...res);
+    }
+
+    if (redirect) {
+      const text = outLines.join('\n') + (outLines.length ? '\n' : '');
+      if (redirect.mode === 'append') {
+        ctx.fs.appendFile(redirect.target, text);
+      } else {
+        ctx.fs.writeFile(redirect.target, text);
+      }
+      return [];
+    }
+    return outLines;
+  }
+
   const expandedTokens = tokenize(expanded);
   let name = expandedTokens[0];
   const args = expandedTokens.slice(1);
+
+  // Batch script execution (CALL script.bat or direct script.bat / script.cmd)
+  let scriptPath = null;
+  if (name.toLowerCase() === 'call' && args.length > 0) {
+    scriptPath = args[0];
+  } else if (name.toLowerCase().endsWith('.bat') || name.toLowerCase().endsWith('.cmd')) {
+    scriptPath = name;
+  } else if (!lookupCommand(name)) {
+    if (ctx.fs.resolve(name + '.bat')) scriptPath = name + '.bat';
+    else if (ctx.fs.resolve(name + '.cmd')) scriptPath = name + '.cmd';
+  }
+
+  if (scriptPath && ctx.fs.resolve(scriptPath)) {
+    const content = ctx.fs.readFile(scriptPath);
+    const scriptLines = content.split(/\r?\n/);
+    const outLines = [];
+    for (const sLine of scriptLines) {
+      const t = sLine.trim();
+      if (!t || t.toLowerCase() === '@echo off' || t.toLowerCase().startsWith('rem ') || t.startsWith('::')) {
+        continue;
+      }
+      const res = executeLine(t, ctx);
+      outLines.push(...res.lines);
+      if (!res.ok) break;
+    }
+    if (redirect) {
+      const text = outLines.join('\n') + (outLines.length ? '\n' : '');
+      if (redirect.mode === 'append') {
+        ctx.fs.appendFile(redirect.target, text);
+      } else {
+        ctx.fs.writeFile(redirect.target, text);
+      }
+      return [];
+    }
+    return outLines;
+  }
 
   // Internal meta commands are handled by the app shell via name prefix
   if (name.toLowerCase() === 'cd' && args.length === 0) {
@@ -290,8 +408,14 @@ export function executeLine(line, ctx) {
       }
       allLines.push(...out);
       ok = true;
+      if (ctx.fs && typeof ctx.fs.setEnv === 'function') {
+        ctx.fs.setEnv('ERRORLEVEL', '0');
+      }
     } catch (err) {
       ok = false;
+      if (ctx.fs && typeof ctx.fs.setEnv === 'function') {
+        ctx.fs.setEnv('ERRORLEVEL', '1');
+      }
       const message = err && err.message ? err.message : String(err);
       allLines.push('ERROR: ' + message);
     }

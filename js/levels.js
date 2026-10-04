@@ -1759,6 +1759,154 @@ export const sequences = {
         },
       },
       {
+        id: 'batch-errorlevel',
+        name: {
+          en_US: 'Exit Codes & Error Handling (IF ERRORLEVEL)',
+          fa: 'کدهای بازگشتی و خطایابی (IF ERRORLEVEL)',
+          de: 'Exit-Codes & Fehlerbehandlung (IF ERRORLEVEL)',
+        },
+        hint: {
+          en_US: 'Run `find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt`.',
+          fa: 'دستور `find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt` را برای ثبت هشدار خطا اجرا کن.',
+          de: 'Führe `find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt` aus.',
+        },
+        about: {
+          en_US: 'Evaluate command exit codes with ERRORLEVEL for robust automation and CI/CD quality gates',
+          fa: 'بررسی کدهای بازگشتی با ERRORLEVEL برای خودکارسازی مطمئن و گیت‌های کنترل کیفیت CI/CD',
+          de: 'Exit-Codes mit ERRORLEVEL für zuverlässige Pipeline-Prüfungen auswerten',
+        },
+        startFS: withHome({ 'server.log': 'INFO: server started\nFAIL: database connection refused\n' }),
+        goalFS: withHome({ 'server.log': 'INFO: server started\nFAIL: database connection refused\n', 'alert.txt': 'alert\n' }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt',
+        goalCommands: ['find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Exit Codes & Error Handling (`IF ERRORLEVEL`)',
+                    '',
+                    'Every program and command returns an exit code upon termination: `0` means success, while non-zero values (like `1`) indicate errors or missing matches.',
+                    '',
+                    'In Windows batch scripts, `IF ERRORLEVEL n` tests if the exit code is greater than or equal to `n`. `IF NOT ERRORLEVEL 1` tests if the command exited with 0 (success).',
+                    '',
+                    'Verify the log contains a failure and write an alert if found:',
+                    '',
+                    '```',
+                    'find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-for',
+        name: {
+          en_US: 'Command-line Loops (FOR %f IN (...) DO)',
+          fa: 'حلقه و تکرار در خط فرمان (FOR %f IN (...) DO)',
+          de: 'Schleifen auf der Befehlszeile (FOR %f IN (...) DO)',
+        },
+        hint: {
+          en_US: 'Run `for %f in (*.log) do move %f archive` to move all matching files.',
+          fa: 'دستور `for %f in (*.log) do move %f archive` را برای انتقال یکجای تمام فایل‌های لاگ اجرا کن.',
+          de: 'Führe `for %f in (*.log) do move %f archive` aus.',
+        },
+        about: {
+          en_US: 'Iterate over files and sets without repetitive typing using the FOR loop',
+          fa: 'تکرار خودکار دستورات روی مجموعه‌ای از فایل‌ها بدون تکرار دستی با حلقه FOR',
+          de: 'Massenoperationen über Dateimengen mit FOR automatisieren',
+        },
+        startFS: withHome({ 'app.log': 'log 1\n', 'error.log': 'log 2\n', 'debug.log': 'log 3\n', archive: {} }),
+        goalFS: withHome({ archive: { 'app.log': 'log 1\n', 'error.log': 'log 2\n', 'debug.log': 'log 3\n' } }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'for %f in (*.log) do move %f archive',
+        goalCommands: ['for %f in (*.log) do move %f archive'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Command-line Loops (`FOR` / `DO`)',
+                    '',
+                    'Manually repeating the same command for dozens of files is slow and prone to errors. The `FOR` command loops over wildcard file matches or item lists:',
+                    '',
+                    '`FOR %variable IN (set) DO command`',
+                    '',
+                    'Archive all `.log` files in one clean sweep:',
+                    '',
+                    '```',
+                    'for %f in (*.log) do move %f archive',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-script',
+        name: {
+          en_US: 'Batch Scripts (BUILD.BAT / CALL)',
+          fa: 'اسکریپت‌نویسی فایل‌های بچ (BUILD.BAT / CALL)',
+          de: 'Batch-Skriptdateien (BUILD.BAT / CALL)',
+        },
+        hint: {
+          en_US: 'Write commands into build.bat to create dist and copy src\\index.js, then execute `build.bat`.',
+          fa: 'دستورات ساخت dist و کپی src\\index.js را داخل build.bat بنویس و سپس `build.bat` را اجرا کن.',
+          de: 'Schreibe Befehle in build.bat und führe die Datei mit `build.bat` aus.',
+        },
+        about: {
+          en_US: 'Author and execute reusable Windows .bat automation scripts',
+          fa: 'ساخت و اجرای اسکریپت‌های اتوماسیون قابل‌استفاده مجدد در قالب فایل‌های .bat ویندوز',
+          de: 'Wiederverwendbare .bat-Automatisierungsskripte erstellen und ausführen',
+        },
+        startFS: withHome({ src: { 'index.js': 'console.log("ready");\n' } }),
+        goalFS: withHome({
+          'build.bat': 'md dist\ncopy src\\index.js dist\n',
+          src: { 'index.js': 'console.log("ready");\n' },
+          dist: { 'index.js': 'console.log("ready");\n' },
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'echo md dist>build.bat & echo copy src\\index.js dist>>build.bat & build.bat',
+        goalCommands: [
+          'echo md dist>build.bat & echo copy src\\index.js dist>>build.bat & build.bat',
+        ],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Reusable Batch Scripts (`.BAT` / `.CMD`)',
+                    '',
+                    'In production environments, engineering teams encapsulate multi-step workflows into `.bat` script files that can be run on-demand or by CI/CD runners.',
+                    '',
+                    'Create a script named `build.bat` containing your build steps, and then execute it directly by typing its name:',
+                    '',
+                    '```',
+                    'echo md dist>build.bat & echo copy src\\index.js dist>>build.bat & build.bat',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
         id: 'batch-master',
         name: {
           en_US: 'Capstone: Production Deployment',

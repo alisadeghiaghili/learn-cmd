@@ -1006,16 +1006,16 @@ class App {
             </div>
             <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
             <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
-            <p><strong>۳۰</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
+            <p><strong>۳۳</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
           ` : loc === 'de' ? `
-            <p>Interaktives <strong>Windows CMD</strong> Tutorial — Von 0 bis Experten-Level (>90/100).</p>
+            <p>Interaktives <strong>Windows CMD</strong> Tutorial — Von 0 bis Experten-Level (100% Praxiswissen).</p>
             <div class="quality-card">
               <div class="quality-badges">
                 <span class="q-badge">🎯 <strong>Lehrplan</strong> erstklassiger Kurse</span>
-                <span class="q-badge">⚡ <strong>Tiefe & Nutzen:</strong> > 90 / 100</span>
-                <span class="q-badge">🎓 <strong>Didaktik:</strong> mind. 8.5 / 10</span>
+                <span class="q-badge">⚡ <strong>Tiefe & Nutzen:</strong> 95 - 100 / 100</span>
+                <span class="q-badge">🎓 <strong>Didaktik:</strong> mind. 9.0 / 10</span>
               </div>
-              <p class="quality-desc">Vollkommen praxisnah vom absoluten Nullpunkt bis zur echten Produktions-Automatisierung mit Dateiattributen, Prozesssteuerung und bedingten Skripten.</p>
+              <p class="quality-desc">Vollkommen praxisnah vom absoluten Nullpunkt bis zur echten Produktions-Automatisierung mit Schleifen, Exit-Codes, Batch-Skripten und Prozesssteuerung.</p>
             </div>
             <div class="learning-box">
               <div class="next-title">Warum CMD wichtig ist und wozu man es braucht:</div>
@@ -1027,16 +1027,16 @@ class App {
             </div>
             <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
             <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
-            <p><strong>30</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
+            <p><strong>33</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
           ` : `
-            <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — from absolute zero to 90+/100 expert mastery.</p>
+            <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — from absolute zero to 100% expert mastery.</p>
             <div class="quality-card">
               <div class="quality-badges">
                 <span class="q-badge">🎯 <strong>Top Curriculum:</strong> Curated from best courses</span>
-                <span class="q-badge">⚡ <strong>Depth & Practicality:</strong> ≥ 90 / 100</span>
-                <span class="q-badge">🎓 <strong>Instruction Quality:</strong> ≥ 8.5 / 10</span>
+                <span class="q-badge">⚡ <strong>Depth & Practicality:</strong> 95 - 100 / 100</span>
+                <span class="q-badge">🎓 <strong>Instruction Quality:</strong> ≥ 9.0 / 10</span>
               </div>
-              <p class="quality-desc">Designed to be completely hands-on, zero-fluff, taking beginners with zero knowledge all the way to production scripting, process control, and file security.</p>
+              <p class="quality-desc">Designed to be completely hands-on, zero-fluff, taking beginners with zero knowledge all the way to production scripting, FOR loops, ERRORLEVEL handling, and .bat build automation.</p>
             </div>
             <div class="learning-box">
               <div class="next-title">Why CMD is important and where it is used:</div>
@@ -1048,7 +1048,7 @@ class App {
             </div>
             <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
             <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
-            <p><strong>30</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
+            <p><strong>33</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
           `}
         </div>
         <div class="modal-actions">

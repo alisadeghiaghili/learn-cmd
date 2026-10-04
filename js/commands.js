@@ -882,8 +882,24 @@ export const COMMANDS = {
   },
 
   if: {
-    usage: 'IF [NOT] EXIST filename command\nIF [/I] [NOT] string1==string2 command',
+    usage: 'IF [NOT] EXIST filename command\nIF [/I] [NOT] string1==string2 command\nIF [NOT] ERRORLEVEL number command',
     help: 'Performs conditional processing in batch programs.',
+    fn() {
+      return ['The syntax of the command is incorrect.'];
+    },
+  },
+
+  for: {
+    usage: 'FOR %variable IN (set) DO command [command-parameters]\nFOR /L %variable IN (start,step,end) DO command [command-parameters]',
+    help: 'Runs a specified command for each file in a set of files.',
+    fn() {
+      return ['The syntax of the command is incorrect.'];
+    },
+  },
+
+  call: {
+    usage: 'CALL [drive:][path]filename [batch-parameters]',
+    help: 'Calls one batch program from another.',
     fn() {
       return ['The syntax of the command is incorrect.'];
     },

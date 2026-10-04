@@ -910,6 +910,75 @@ export const dialogsFa = {
     ],
   },
 
+  'batch-errorlevel': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## کدهای بازگشتی و خطایابی (`IF ERRORLEVEL`)',
+            '',
+            'در اتوماسیون‌های حرفه‌ای و خطوط لوله CI/CD، کنترل موفقیت یا شکست دستورات الزامی است. هر برنامه در ویندوز یک کد خروجی برمی‌گرداند؛ مقدار `0` به معنی موفقیت و مقادیر بزرگتر (مانند `1`) به معنی خطا یا عدم انطباق است.',
+            '',
+            'دستور `IF ERRORLEVEL n` بررسی می‌کند که آیا کد خروجی بزرگتر مساوی `n` است یا خیر. دستور `IF NOT ERRORLEVEL 1` تضمین می‌کند که دستور بدون خطا پایان یافته است.',
+            '',
+            'وجود خطا را در لاگ بررسی کن و در صورت وجود، هشدار را ثبت کن:',
+            '',
+            '```',
+            'find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-for': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## حلقه و تکرار در خط فرمان (`FOR` / `DO`)',
+            '',
+            'تکرار دستی یک دستور برای ده‌ها فایل، کند و پرخطاست. دستور `FOR` به شما امکان می‌دهد روی فایل‌ها یا لیست داده‌ها حلقه بزنید:',
+            '',
+            '`FOR %f IN (*.log) DO move %f archive`',
+            '',
+            'متغیر `%f` به نوبت نام هر فایل را می‌گیرد و دستور بعد از `DO` را برای آن اجرا می‌کند.',
+            '',
+            'تمام فایل‌های `.log` را در یک حرکت به پوشه `archive` منتقل کن.',
+            '',
+            '```',
+            'for %f in (*.log) do move %f archive',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-script': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## اسکریپت‌نویسی فایل‌های بچ (`.BAT` / `.CMD`)',
+            '',
+            'یک متخصص خط فرمان برای کارهای روزمره، مراحل را داخل یک فایل متنی با پسوند `.bat` ذخیره می‌کند تا با یک دستور ساده اجرا شود.',
+            '',
+            'با دستور `echo` مراحل بیلد را داخل فایل `build.bat` بنویس و سپس با تایپ نام آن، اسکریپت را مستقیماً اجرا کن:',
+            '',
+            '```',
+            'echo md dist>build.bat & echo copy src\\index.js dist>>build.bat & build.bat',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
   'batch-master': {
     childViews: [
       {
@@ -1934,6 +2003,57 @@ export const LEVEL_METADATA = {
       objective: 'Führe `sort /r scores.txt > ranking.txt` aus.',
       learning: ['Sortieren von Datenströmen mit SORT', 'Absteigende Reihenfolge mit /R'],
       fieldNotes: ['`sort` verarbeitet Dateien ebenso wie Pipes aus stdin.'],
+    },
+  },
+  'batch-errorlevel': {
+    en: {
+      objective: 'Run `find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt` to trigger on error status.',
+      learning: ['Exit codes and status inspection', 'Using IF ERRORLEVEL and IF NOT ERRORLEVEL in automation'],
+      fieldNotes: ['`0` indicates success; non-zero exit codes represent errors or missing search matches.'],
+    },
+    fa: {
+      objective: 'دستور `find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt` را برای ثبت خطا بر اساس کد بازگشتی اجرا کن.',
+      learning: ['کدهای بازگشتی و وضعیت خروجی دستورات', 'استفاده از IF ERRORLEVEL و IF NOT ERRORLEVEL در اتوماسیون'],
+      fieldNotes: ['کد `0` نشان‌دهنده موفقیت و کدهای غیرصفر نشان‌دهنده خطا یا نیافتن تطابق هستند.'],
+    },
+    de: {
+      objective: 'Führe `find "FAIL" server.log && if not errorlevel 1 echo alert>alert.txt` aus.',
+      learning: ['Exit-Codes und Statusabfragen', 'Einsatz von IF ERRORLEVEL und IF NOT ERRORLEVEL in der Automatisierung'],
+      fieldNotes: ['`0` signalisiert Erfolg, während Werte ungleich 0 Fehler oder fehlende Treffer anzeigen.'],
+    },
+  },
+  'batch-for': {
+    en: {
+      objective: 'Run `for %f in (*.log) do move %f archive` to move all log files in a single pass.',
+      learning: ['Command-line loops with FOR', 'Wildcard iteration and bulk file automation'],
+      fieldNotes: ['In interactive CMD use `%f`, whereas inside batch files use `%%f`.'],
+    },
+    fa: {
+      objective: 'دستور `for %f in (*.log) do move %f archive` را برای انتقال کلیه لاگ‌ها در یک گام اجرا کن.',
+      learning: ['حلقه‌ها در خط فرمان با دستور FOR', 'پیمایش الگوهای عمومی و اتوماسیون دسته‌جمعی فایل‌ها'],
+      fieldNotes: ['در خط فرمان مستقیم از `%f` و در داخل اسکریپت‌های بچ از `%%f` استفاده می‌شود.'],
+    },
+    de: {
+      objective: 'Führe `for %f in (*.log) do move %f archive` aus.',
+      learning: ['Befehlszeilen-Schleifen mit FOR', 'Wildcard-Iterationen und Massenverarbeitung'],
+      fieldNotes: ['In der interaktiven Konsole `%f`, in Batch-Skripten `%%f` verwenden.'],
+    },
+  },
+  'batch-script': {
+    en: {
+      objective: 'Create `build.bat` with build commands and run `build.bat` to automate the build pipeline.',
+      learning: ['Authoring reusable .BAT files', 'Executing batch automation workflows'],
+      fieldNotes: ['.BAT files bundle multiple commands for seamless CI/CD and deployment tasks.'],
+    },
+    fa: {
+      objective: 'اسکریپت `build.bat` را با دستورات ساخت بساز و برای اجرای خودکار پایپ‌لاین `build.bat` را اجرا کن.',
+      learning: ['نوشتن فایل‌های اسکریپت با پسوند BAT', 'اجرای پایپ‌لاین‌های اتوماسیون با فایل‌های بچ'],
+      fieldNotes: ['فایل‌های BAT چندین دستور را برای اجرای بدون دخالت دست در فرآیندهای CI/CD بسته‌بندی می‌کنند.'],
+    },
+    de: {
+      objective: 'Erstelle `build.bat` und führe das Skript aus.',
+      learning: ['Wiederverwendbare .BAT-Skripte schreiben', 'Batch-Pipelines automatisieren'],
+      fieldNotes: ['.BAT-Dateien fassen mehrere Befehle für reibungslose CI/CD-Abläufe zusammen.'],
     },
   },
   'batch-master': {
