@@ -380,11 +380,11 @@ class App {
   }
 
   async initVisitorCounter() {
-    this.cachedVisitorCount = 5;
+    this.cachedVisitorCount = 3;
     this.renderVisitorBadge();
     const count = await getVisitorCount();
     if (count !== null) {
-      this.cachedVisitorCount = count;
+      this.cachedVisitorCount = Math.max(3, count);
       this.renderVisitorBadge();
     }
   }
@@ -984,7 +984,7 @@ class App {
     const loc = getLocale();
     this.openModal(`
       <div class="levels-dialog welcome-dialog">
-        <h2>welcome to learn <span class="brand-cmd">CMD</span></h2>
+        <h2><img src="assets/favicon.svg" alt="CMD" class="welcome-brand-icon" />welcome to learn <span class="brand-cmd">CMD</span></h2>
         <div class="markdown">
           ${loc === 'fa' ? `
             <p>آموزش تعاملی <strong>خط فرمان ویندوز (CMD)</strong> — از نقطه صفر تا تسلط تخصصی بالای ۹۰٪ به همراه مراحل هدف‌محور پروداکشن.</p>

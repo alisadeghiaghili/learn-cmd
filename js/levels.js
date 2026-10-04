@@ -105,7 +105,7 @@ export const sequences = {
                 type: 'ModalAlert',
                 options: {
                   markdowns: [
-                    '## welcome to learn <span class="brand-cmd">CMD</span>',
+                    '## <img src="assets/favicon.svg" alt="CMD" class="welcome-brand-icon" /> welcome to learn <span class="brand-cmd">CMD</span>',
                     '',
                     'The Windows Command Processor (`cmd.exe`) is a text interface for your computer. Instead of clicking icons, you type commands and the shell answers.',
                     '',

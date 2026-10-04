@@ -7,6 +7,7 @@
 
 const STORAGE_KEY = 'learn-cmd:visitor-count-cache';
 const BADGE_URL = 'https://api.visitorbadge.io/api/combined?path=learn-cmd';
+const BASE_COUNT = 3;
 
 /**
  * Extracts the numeric visitor count from the visitorbadge SVG payload.
@@ -29,9 +30,10 @@ export function parseVisitorBadgeSvg(svg) {
 
 /**
  * Retrieves the visitor count, incrementing on the first visit per browser,
- * while returning cached count on subsequent visits within the same session.
+ * while returning cached count on subsequent visits to count unique visitors.
+ * Always ensures the displayed count starts from at least 3.
  *
- * @returns {Promise<number | null>}
+ * @returns {Promise<number>}
  */
 export async function getVisitorCount() {
   try {
@@ -39,7 +41,7 @@ export async function getVisitorCount() {
     if (raw) {
       const cached = JSON.parse(raw);
       if (typeof cached.count === 'number' && Number.isFinite(cached.count)) {
-        return cached.count;
+        return Math.max(BASE_COUNT, cached.count);
       }
     }
   } catch {
@@ -55,24 +57,25 @@ export async function getVisitorCount() {
       },
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) return BASE_COUNT;
 
     const svg = await res.text();
-    const count = parseVisitorBadgeSvg(svg);
+    const parsed = parseVisitorBadgeSvg(svg);
 
-    if (count !== null) {
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ count, at: Date.now() })
-        );
-      } catch {
-        // quota or private mode
-      }
+    const count = parsed !== null ? Math.max(BASE_COUNT, parsed) : BASE_COUNT;
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ count, at: Date.now() })
+      );
+    } catch {
+      // quota or private mode
     }
 
     return count;
   } catch {
-    return null;
+    return BASE_COUNT;
   }
 }
+
