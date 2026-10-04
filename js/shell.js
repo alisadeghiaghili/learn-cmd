@@ -110,6 +110,60 @@ function executeSimple(segment, ctx, stdinText) {
 
   // Environment variable expansion on the raw line before tokenizing again
   const expanded = ctx.fs.expandEnv(command);
+
+  // IF command support (IF [NOT] EXIST ..., IF [/I] [NOT] "A"=="B" ...)
+  const ifExistMatch = expanded.match(/^if\s+(not\s+)?exist\s+(\S+)\s+(.+)$/i);
+  if (ifExistMatch) {
+    const isNot = Boolean(ifExistMatch[1]);
+    const target = ifExistMatch[2].replace(/^"|"$/g, '');
+    const thenCmd = ifExistMatch[3];
+    const exists = ctx.fs.resolve(target) !== null;
+    const cond = isNot ? !exists : exists;
+    if (cond) {
+      const out = executePipeline(thenCmd, ctx);
+      if (redirect) {
+        const text = out.join('\n') + (out.length ? '\n' : '');
+        if (redirect.mode === 'append') {
+          ctx.fs.appendFile(redirect.target, text);
+        } else {
+          ctx.fs.writeFile(redirect.target, text);
+        }
+        return [];
+      }
+      return out;
+    }
+    return [];
+  }
+
+  const ifEqMatch = expanded.match(/^if\s+(\/i\s+)?(not\s+)?(".*?"|\S+)\s*==\s*(".*?"|\S+)\s+(.+)$/i);
+  if (ifEqMatch) {
+    const ignoreCase = Boolean(ifEqMatch[1]);
+    const isNot = Boolean(ifEqMatch[2]);
+    let left = ifEqMatch[3].replace(/^"|"$/g, '');
+    let right = ifEqMatch[4].replace(/^"|"$/g, '');
+    const thenCmd = ifEqMatch[5];
+    if (ignoreCase) {
+      left = left.toLowerCase();
+      right = right.toLowerCase();
+    }
+    const equal = left === right;
+    const cond = isNot ? !equal : equal;
+    if (cond) {
+      const out = executePipeline(thenCmd, ctx);
+      if (redirect) {
+        const text = out.join('\n') + (out.length ? '\n' : '');
+        if (redirect.mode === 'append') {
+          ctx.fs.appendFile(redirect.target, text);
+        } else {
+          ctx.fs.writeFile(redirect.target, text);
+        }
+        return [];
+      }
+      return out;
+    }
+    return [];
+  }
+
   const expandedTokens = tokenize(expanded);
   let name = expandedTokens[0];
   const args = expandedTokens.slice(1);

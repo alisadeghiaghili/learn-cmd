@@ -764,6 +764,146 @@ export const dialogsFa = {
       },
     ],
   },
+
+  'sys-attrib': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## صفات فایل (`ATTRIB`)',
+            '',
+            'فایل‌های ویندوز دارای صفات متاداده هستند: **R** (فقط‌خواندنی)، **H** (مخفی)، **A** (آرشیو) و **S** (سیستمی).',
+            '',
+            'با `attrib +r <file>` می‌توانید یک فایل پیکربندی حیاتی را قفل کنید تا به اشتباه پاک یا بازنویسی نشود.',
+            '',
+            '```',
+            'attrib +r config.ini',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'sys-where': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## یافتن برنامه‌ها (`WHERE`)',
+            '',
+            'دستور `where` تمام مسیرهای تعریف‌شده در متغیر محیطی `%PATH%` را اسکن می‌کند تا محل واقعی یک برنامه اجرایی را پیدا کند.',
+            '',
+            'مسیر فایل اجرایی `cmd` را با ریدایرکشن در `cmd_path.txt` ذخیره کن.',
+            '',
+            '```',
+            'where cmd > cmd_path.txt',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'sys-pushpop': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## استک دایرکتوری (`PUSHD` / `POPD`)',
+            '',
+            'به‌جای به خاطر سپردن مسیر قبلی هنگام رفتن به پوشه‌های تودرتو، دستور `pushd <dir>` پوشه فعلی را در یک پشته (Stack) ذخیره کرده و به پوشه مقصد می‌رود. سپس `popd` شما را فوراً به مبدأ برمی‌گرداند.',
+            '',
+            'وارد پوشه `Documents` شو، فایل `bk.txt` را بنویس و با `popd` به پوشه اول بازگرد.',
+          ],
+        },
+      },
+    ],
+  },
+
+  'sys-tasks': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## مدیریت پردازش‌ها (`TASKLIST` و `TASKKILL`)',
+            '',
+            'در محیط‌های واقعی و سرورها، هنگامی که برنامه‌ای هنگ می‌کند یا بیش از حد منابع مصرف می‌کند، با `tasklist` آن را شناسایی کرده و با `taskkill /im <name> /f` فوراً به آن خاتمه می‌دهیم.',
+            '',
+            'با دستور `taskkill /im node.exe /f` پردازش معلق را ببند.',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-if': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## منطق شرطی در اسکریپت‌ها (`IF EXIST`)',
+            '',
+            'اسکریپت‌های اتوماسیون پروداکشن نباید به خاطر عدم وجود یک فایل خطا بدهند. دستور `if exist <file> <command>` عملیات را مشروط به وجود فایل می‌کند.',
+            '',
+            'بررسی کن اگر فایل `lock.tmp` وجود دارد، آن را حذف کن.',
+            '',
+            '```',
+            'if exist lock.tmp del lock.tmp',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-sort': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## مرتب‌سازی داده‌ها (`SORT /R`)',
+            '',
+            'دستور `sort` سطرهای متنی یا خروجی دستورات را به ترتیب الفبایی یا عددی مرتب می‌کند. سوییچ `/r` ترتیب را معکوس (نزولی) می‌کند.',
+            '',
+            'محتوای `scores.txt` را به صورت نزولی در `ranking.txt` ذخیره کن.',
+            '',
+            '```',
+            'sort /r scores.txt > ranking.txt',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-master': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## چالش نهایی: استقرار پروداکشن (Capstone)',
+            '',
+            'اکنون در **سطح اکسپرت کامل** هستید. یک خط لوله کامل استقرار نرم‌افزار را اجرا کنید:',
+            '',
+            '۱. ایجاد پوشه انتشار: `md release`',
+            '۲. کپی فایل کد: `copy app.js release`',
+            '۳. قفل امنیتی فایل کد: `attrib +r release\\app.js`',
+            '۴. پاک‌سازی شرطی فایل‌های موقت: `if exist cache.tmp del cache.tmp`',
+            '',
+            'این عملیات را با عملگر `&&` به صورت یکپارچه اجرا کن.',
+          ],
+        },
+      },
+    ],
+  },
 };
 
 /**
@@ -1648,6 +1788,125 @@ export const LEVEL_METADATA = {
       objective: 'Erstelle eine vollständige Projektstruktur mit verketteten Befehlen.',
       learning: ['Beherrschung mehrstufiger CMD-Automatisierung', 'Praxisnaher Aufbau von Projektstrukturen'],
       fieldNotes: ['Die Kombination von `&`, `&&` und Pfaden ermöglicht vollständige Projekterstellung.'],
+    },
+  },
+  'sys-attrib': {
+    en: {
+      objective: 'Run `attrib +r config.ini` to protect your configuration file.',
+      learning: ['Understanding Windows file attributes (R, H, S, A)', 'Protecting critical files with ATTRIB +R'],
+      fieldNotes: ['`attrib -r` strips the read-only flag when files need editing.'],
+    },
+    fa: {
+      objective: 'دستور `attrib +r config.ini` را اجرا کن تا فایل پیکربندی فقط‌خواندنی شود.',
+      learning: ['شناخت صفات فایل در ویندوز (R، H، S، A)', 'محافظت از فایل‌های حیاتی با ATTRIB +R'],
+      fieldNotes: ['با دستور `attrib -r` می‌توان قفل فقط‌خواندنی فایل را باز کرد.'],
+    },
+    de: {
+      objective: 'Führe `attrib +r config.ini` aus, um die Datei zu schützen.',
+      learning: ['Dateiattribute in Windows verstehen', 'Dateischutz mit ATTRIB +R'],
+      fieldNotes: ['Mit `attrib -r` wird der Schreibschutz wieder entfernt.'],
+    },
+  },
+  'sys-where': {
+    en: {
+      objective: 'Run `where cmd > cmd_path.txt` to find and record executable locations.',
+      learning: ['Locating system binaries via %PATH%', 'Redirecting WHERE discovery output'],
+      fieldNotes: ['`where` is the CMD equivalent of UNIX `which`, searching all PATH folders.'],
+    },
+    fa: {
+      objective: 'دستور `where cmd > cmd_path.txt` را اجرا کن تا مسیر فایل اجرایی ثبت شود.',
+      learning: ['یافتن فایل‌های اجرایی از طریق متغیر محیطی %PATH%', 'ریدایرکت کردن خروجی دستور WHERE به فایل'],
+      fieldNotes: ['دستور `where` معادل دستور `which` در لینوکس است و کل دایرکتوری‌های PATH را می‌گردد.'],
+    },
+    de: {
+      objective: 'Führe `where cmd > cmd_path.txt` aus, um den Pfad zu ermitteln.',
+      learning: ['Programme über %PATH% finden', 'Ausgabe von WHERE weiterleiten'],
+      fieldNotes: ['`where` entspricht dem Linux-Befehl `which`.'],
+    },
+  },
+  'sys-pushpop': {
+    en: {
+      objective: 'Run `pushd Documents && echo backup>bk.txt && popd` to use directory stack.',
+      learning: ['Using directory stack (PUSHD/POPD)', 'Safe folder traversal and instant return'],
+      fieldNotes: ['`pushd` automatically maps network shares to temporary drive letters on Windows.'],
+    },
+    fa: {
+      objective: 'دستور `pushd Documents && echo backup>bk.txt && popd` را برای استفاده از استک پوشه‌ها اجرا کن.',
+      learning: ['کار با پشته دایرکتوری (PUSHD و POPD)', 'پیمایش مطمئن پوشه‌ها و بازگشت آنی به مبدأ'],
+      fieldNotes: ['دستور `pushd` در ویندوزهای واقعی حتی مسیرهای شبکه را به یک درایو موقت متصل می‌کند.'],
+    },
+    de: {
+      objective: 'Führe `pushd Documents && echo backup>bk.txt && popd` aus.',
+      learning: ['Verzeichnis-Stack nutzen (PUSHD/POPD)', 'Sicheres Wechseln und Zurückspringen'],
+      fieldNotes: ['`pushd` speichert den aktuellen Pfad auf einem Stack.'],
+    },
+  },
+  'sys-tasks': {
+    en: {
+      objective: 'Inspect active tasks and terminate the rogue process: `taskkill /im node.exe /f`.',
+      learning: ['Process inspection with TASKLIST', 'Forced task termination with TASKKILL /F'],
+      fieldNotes: ['`taskkill /f /im process.exe` forcefully ends stuck processes in production.'],
+    },
+    fa: {
+      objective: 'پردازش‌ها را بررسی کرده و پروسه معلق را متوقف کن: `taskkill /im node.exe /f`.',
+      learning: ['مشاهده لیست پردازش‌های ویندوز با TASKLIST', 'بستن اجباری پردازش‌ها با سوییچ /F در TASKKILL'],
+      fieldNotes: ['سوییچ `/f` در دستور `taskkill` پردازش‌های قفل‌شده یا بدون پاسخ را بلافاصله می‌بندد.'],
+    },
+    de: {
+      objective: 'Beende den blockierten Prozess mit `taskkill /im node.exe /f`.',
+      learning: ['Prozesse mit TASKLIST anzeigen', 'Prozesse mit TASKKILL /F beenden'],
+      fieldNotes: ['`taskkill /f /im prozess.exe` beendet blockierte Aufgaben sofort.'],
+    },
+  },
+  'batch-if': {
+    en: {
+      objective: 'Run `if exist lock.tmp del lock.tmp` for safe conditional file deletion.',
+      learning: ['Guarding batch operations with IF EXIST', 'Preventing script errors when files are absent'],
+      fieldNotes: ['`if not exist` is equally useful for bootstrapping missing config files.'],
+    },
+    fa: {
+      objective: 'دستور `if exist lock.tmp del lock.tmp` را برای حذف شرطی و ایمن فایل اجرا کن.',
+      learning: ['محافظت از عملیات اسکریپت با شرط IF EXIST', 'جلوگیری از بروز خطای توقف در اسکریپت‌های Batch'],
+      fieldNotes: ['ترکیب `if not exist` برای ایجاد فایل‌های تنظیمات در صورت عدم وجود کاربرد زیادی دارد.'],
+    },
+    de: {
+      objective: 'Führe `if exist lock.tmp del lock.tmp` für sicheres bedingtes Löschen aus.',
+      learning: ['Bedingte Logik mit IF EXIST', 'Fehlervermeidung in Skripten'],
+      fieldNotes: ['`if not exist` eignet sich hervorragend zur Initialisierung fehlender Dateien.'],
+    },
+  },
+  'batch-sort': {
+    en: {
+      objective: 'Run `sort /r scores.txt > ranking.txt` to sort records in reverse order.',
+      learning: ['Stream sorting with SORT', 'Descending order with /R flag and file output'],
+      fieldNotes: ['`sort` works seamlessly with both files and stdin pipes.'],
+    },
+    fa: {
+      objective: 'دستور `sort /r scores.txt > ranking.txt` را برای مرتب‌سازی معکوس رکوردها اجرا کن.',
+      learning: ['مرتب‌سازی جریان‌های متنی با دستور SORT', 'تنظیم ترتیب نزولی با سوییچ /R و ذخیره در فایل'],
+      fieldNotes: ['دستور `sort` هم مستقیماً روی فایل‌ها و هم در امتداد پایپ‌لاین‌ها بدون نقص کار می‌کند.'],
+    },
+    de: {
+      objective: 'Führe `sort /r scores.txt > ranking.txt` aus.',
+      learning: ['Sortieren von Datenströmen mit SORT', 'Absteigende Reihenfolge mit /R'],
+      fieldNotes: ['`sort` verarbeitet Dateien ebenso wie Pipes aus stdin.'],
+    },
+  },
+  'batch-master': {
+    en: {
+      objective: 'Execute the full multi-step production release workflow.',
+      learning: ['Capstone deployment chaining', 'Integrating directories, files, attributes, and conditions'],
+      fieldNotes: ['Production batch automation relies on robust chaining, attribute locks, and guarded cleanup.'],
+    },
+    fa: {
+      objective: 'خط لوله کامل استقرار پروداکشن را با دستورات زنجیره‌ای پیاده‌سازی کن.',
+      learning: ['اتوماسیون استقرار پروداکشن در سطح اکسپرت', 'ترکیب پوشه‌ها، کپی داده، قفل صفات و پاک‌سازی شرطی'],
+      fieldNotes: ['اسکریپت‌های انتشار پروداکشن بر زنجیره دستورات ایمن، قفل صفات و پاک‌سازی مشروط تکیه دارند.'],
+    },
+    de: {
+      objective: 'Führe den vollständigen Bereitstellungs-Workflow aus.',
+      learning: ['Experten-Deployment mit Skripten', 'Kombination von Ordnern, Attributen und Bedingungen'],
+      fieldNotes: ['Produktionsskripte erfordern sichere Verknüpfung, Schreibschutz und bedingte Bereinigung.'],
     },
   },
 };

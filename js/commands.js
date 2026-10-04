@@ -670,6 +670,87 @@ export const COMMANDS = {
     },
   },
 
+  tasklist: {
+    usage: 'TASKLIST [/FI filter] [/FO format]',
+    help: 'Displays all currently running processes.',
+    fn(_args, ctx) {
+      if (!ctx.fs.processes) {
+        ctx.fs.processes = [
+          { name: 'System', pid: '4', mem: '140 K' },
+          { name: 'smss.exe', pid: '388', mem: '1,024 K' },
+          { name: 'csrss.exe', pid: '544', mem: '4,300 K' },
+          { name: 'cmd.exe', pid: '4120', mem: '3,480 K' },
+          { name: 'explorer.exe', pid: '2140', mem: '45,200 K' },
+          { name: 'node.exe', pid: '7892', mem: '38,400 K' },
+        ];
+      }
+      const lines = [
+        '',
+        'Image Name                     PID Session Name        Session#    Mem Usage',
+        '========================= ======== ================ =========== ============',
+      ];
+      for (const p of ctx.fs.processes) {
+        lines.push(
+          `${pad(p.name, 25)} ${pad(String(p.pid), 8, true)} ${pad('Console', 16)} ${pad('1', 11, true)} ${pad(p.mem, 12, true)}`
+        );
+      }
+      return lines;
+    },
+  },
+
+  taskkill: {
+    usage: 'TASKKILL [/F] [/IM imagename | /PID processid]',
+    help: 'Terminates tasks by process id (PID) or image name.',
+    fn(args, ctx) {
+      if (!args || args.length === 0) throw cmdError('ERROR: Invalid syntax. Specify /IM or /PID.');
+      let targetName = null;
+      let targetPid = null;
+      for (let i = 0; i < args.length; i += 1) {
+        const a = args[i].toUpperCase();
+        if (a === '/IM' && args[i + 1]) {
+          targetName = args[i + 1].toLowerCase();
+          i += 1;
+        } else if (a.startsWith('/IM:')) {
+          targetName = a.slice(4).toLowerCase();
+        } else if (a === '/PID' && args[i + 1]) {
+          targetPid = args[i + 1];
+          i += 1;
+        } else if (a.startsWith('/PID:')) {
+          targetPid = a.slice(5);
+        }
+      }
+      if (!targetName && !targetPid) {
+        const nonFlag = args.find((x) => !x.startsWith('/'));
+        if (nonFlag) targetName = nonFlag.toLowerCase();
+      }
+      if (!targetName && !targetPid) throw cmdError('ERROR: Parameter /IM or /PID required.');
+
+      if (!ctx.fs.processes) {
+        ctx.fs.processes = [
+          { name: 'System', pid: '4', mem: '140 K' },
+          { name: 'smss.exe', pid: '388', mem: '1,024 K' },
+          { name: 'csrss.exe', pid: '544', mem: '4,300 K' },
+          { name: 'cmd.exe', pid: '4120', mem: '3,480 K' },
+          { name: 'explorer.exe', pid: '2140', mem: '45,200 K' },
+          { name: 'node.exe', pid: '7892', mem: '38,400 K' },
+        ];
+      }
+
+      const idx = ctx.fs.processes.findIndex((p) => {
+        if (targetName && p.name.toLowerCase() === targetName) return true;
+        if (targetPid && String(p.pid) === String(targetPid)) return true;
+        return false;
+      });
+
+      if (idx === -1) {
+        throw cmdError(`ERROR: The process "${targetName || targetPid}" not found.`);
+      }
+
+      const killed = ctx.fs.processes.splice(idx, 1)[0];
+      return [`SUCCESS: The process "${killed.name}" with PID ${killed.pid} has been terminated.`];
+    },
+  },
+
   title: {
     usage: 'TITLE [string]',
     help: 'Sets the window title for a CMD.EXE session.',
@@ -784,6 +865,14 @@ export const COMMANDS = {
       }
       if (diffs === 0) lines.push('FC: no differences encountered');
       return lines;
+    },
+  },
+
+  if: {
+    usage: 'IF [NOT] EXIST filename command\nIF [/I] [NOT] string1==string2 command',
+    help: 'Performs conditional processing in batch programs.',
+    fn() {
+      return ['The syntax of the command is incorrect.'];
     },
   },
 };

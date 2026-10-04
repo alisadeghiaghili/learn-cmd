@@ -449,3 +449,39 @@ test('command-only levels solve properly when executed and recorded in golf', as
   assert.equal(diff.missingCommands.length, 0);
 });
 
+test('tasklist and taskkill manage processes', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
+  const listRes = executeLine('tasklist', { fs });
+  assert.ok(listRes.ok);
+  assert.ok(listRes.lines.some((l) => l.includes('node.exe')));
+
+  const killRes = executeLine('taskkill /im node.exe /f', { fs });
+  assert.ok(killRes.ok);
+  assert.ok(killRes.lines.some((l) => l.includes('SUCCESS')));
+
+  const listAfter = executeLine('tasklist', { fs });
+  assert.ok(!listAfter.lines.some((l) => l.includes('node.exe')));
+});
+
+test('if exist and if string==string execute conditional branches', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem({ Users: { student: { 'exists.txt': 'yes\n' } } });
+  fs.cwd = 'C:\\Users\\student';
+
+  executeLine('if exist exists.txt echo found>result.txt', { fs });
+  assert.equal(fs.readFile('result.txt'), 'found\n');
+
+  executeLine('if not exist missing.txt echo not-found>>result.txt', { fs });
+  assert.ok(fs.readFile('result.txt').includes('not-found'));
+
+  executeLine('if exist missing.txt echo bad>>result.txt', { fs });
+  assert.ok(!fs.readFile('result.txt').includes('bad'));
+
+  executeLine('if "a"=="a" echo match>>result.txt', { fs });
+  assert.ok(fs.readFile('result.txt').includes('match'));
+});
+
+

@@ -979,44 +979,44 @@ class App {
         <h2>welcome to learn <span class="brand-cmd">CMD</span></h2>
         <div class="markdown">
           ${loc === 'fa' ? `
-            <p>آموزش تعاملی <strong>خط فرمان ویندوز (CMD)</strong> — محیط شبیه‌ساز زنده به همراه مراحل آموزشی هدف‌محور.</p>
+            <p>آموزش تعاملی <strong>خط فرمان ویندوز (CMD)</strong> — از نقطه صفر تا تسلط تخصصی بالای ۹۰٪ به همراه مراحل هدف‌محور پروداکشن.</p>
             <div class="quality-card">
               <div class="quality-badges">
                 <span class="q-badge">🎯 <strong>سرفصل‌های جامع</strong> برترین دوره‌های دنیا</span>
-                <span class="q-badge">⚡ <strong>عمق و کاربرد:</strong> حداقل ۸.۵ / ۱۰</span>
+                <span class="q-badge">⚡ <strong>عمق و کاربرد:</strong> بالای ۹۰ / ۱۰۰</span>
                 <span class="q-badge">🎓 <strong>کیفیت آموزش:</strong> حداقل ۸.۵ / ۱۰</span>
               </div>
-              <p class="quality-desc">این دوره کاملاً کاربردی، سناریومحور و بدون حاشیه طراحی شده تا مهارت‌های واقعی کار در محیط خط فرمان ویندوز و اسکریپت‌نویسی پروداکشن را یاد بگیرید.</p>
+              <p class="quality-desc">این دوره از صفر مطلق شروع شده و تا سطح کامل پروداکشن و اتوماسیون پیش می‌رود؛ بدون نیاز به پیش‌زمینه قبلی تا تسلط بر صفات فایل، پردازش‌ها و اسکریپت‌های شرطی.</p>
             </div>
             <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
             <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
-            <p><strong>۲۲</strong> مرحله آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
+            <p><strong>۲۹</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
           ` : loc === 'de' ? `
-            <p>Interaktives <strong>Windows CMD</strong> Tutorial — Sandbox + geführte Übungslevel.</p>
+            <p>Interaktives <strong>Windows CMD</strong> Tutorial — Von 0 bis Experten-Level (>90/100).</p>
             <div class="quality-card">
               <div class="quality-badges">
                 <span class="q-badge">🎯 <strong>Lehrplan</strong> erstklassiger Kurse</span>
-                <span class="q-badge">⚡ <strong>Tiefe & Nutzen:</strong> mind. 8.5 / 10</span>
+                <span class="q-badge">⚡ <strong>Tiefe & Nutzen:</strong> > 90 / 100</span>
                 <span class="q-badge">🎓 <strong>Didaktik:</strong> mind. 8.5 / 10</span>
               </div>
-              <p class="quality-desc">Vollkommen praxisnah, szenariobasiert und ohne überflüssige Theorie — konzipiert für echte Produktivitätsgewinne im Windows-Terminal.</p>
+              <p class="quality-desc">Vollkommen praxisnah vom absoluten Nullpunkt bis zur echten Produktions-Automatisierung mit Dateiattributen, Prozesssteuerung und bedingten Skripten.</p>
             </div>
             <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
             <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
-            <p><strong>22</strong> Level enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
+            <p><strong>29</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
           ` : `
-            <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — sandbox + guided levels.</p>
+            <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — from absolute zero to 90+/100 expert mastery.</p>
             <div class="quality-card">
               <div class="quality-badges">
                 <span class="q-badge">🎯 <strong>Top Curriculum:</strong> Curated from best courses</span>
-                <span class="q-badge">⚡ <strong>Depth & Practicality:</strong> ≥ 8.5 / 10</span>
+                <span class="q-badge">⚡ <strong>Depth & Practicality:</strong> ≥ 90 / 100</span>
                 <span class="q-badge">🎓 <strong>Instruction Quality:</strong> ≥ 8.5 / 10</span>
               </div>
-              <p class="quality-desc">Designed to be completely hands-on, practical, and zero-fluff — mastering real-world Windows command line and automation skills.</p>
+              <p class="quality-desc">Designed to be completely hands-on, zero-fluff, taking beginners with zero knowledge all the way to production scripting, process control, and file security.</p>
             </div>
             <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
             <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
-            <p><strong>22</strong> levels included. Open Levels to begin, or stay in sandbox.</p>
+            <p><strong>29</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
           `}
         </div>
         <div class="modal-actions">

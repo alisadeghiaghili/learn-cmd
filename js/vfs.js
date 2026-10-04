@@ -148,6 +148,10 @@ class VirtualFileSystem {
     ]);
     /** @type {string[]} */
     this.drives = [DRIVE];
+    /** @type {Array<{ name: string, pid: string, mem: string }> | null} */
+    this.processes = null;
+    /** @type {string[] | null} */
+    this.dirStack = null;
     this.load(spec || defaultFsSpec());
   }
 
@@ -606,31 +610,37 @@ class VirtualFileSystem {
     const fs = new VirtualFileSystem(this.serialize());
     fs.cwd = this.cwd;
     fs.env = new Map(this.env);
+    if (this.processes) fs.processes = JSON.parse(JSON.stringify(this.processes));
+    if (this.dirStack) fs.dirStack = [...this.dirStack];
     return fs;
   }
 
   /**
    * Snapshot for undo.
    *
-   * @returns {{ spec: Record<string, unknown>, cwd: string, env: Map<string, string> }}
+   * @returns {{ spec: Record<string, unknown>, cwd: string, env: Map<string, string>, processes?: Array<{ name: string, pid: string, mem: string }> | null, dirStack?: string[] | null }}
    */
   snapshot() {
     return {
       spec: this.serialize(),
       cwd: this.cwd,
       env: new Map(this.env),
+      processes: this.processes ? JSON.parse(JSON.stringify(this.processes)) : null,
+      dirStack: this.dirStack ? [...this.dirStack] : null,
     };
   }
 
   /**
    * Restore a snapshot.
    *
-   * @param {{ spec: Record<string, unknown>, cwd: string, env: Map<string, string> }} snap
+   * @param {{ spec: Record<string, unknown>, cwd: string, env: Map<string, string>, processes?: Array<{ name: string, pid: string, mem: string }> | null, dirStack?: string[] | null }} snap
    */
   restore(snap) {
     this.load(snap.spec);
     this.cwd = snap.cwd;
     this.env = new Map(snap.env);
+    this.processes = snap.processes ? JSON.parse(JSON.stringify(snap.processes)) : null;
+    this.dirStack = snap.dirStack ? [...snap.dirStack] : null;
     this.ensureDefaultProfile();
   }
 

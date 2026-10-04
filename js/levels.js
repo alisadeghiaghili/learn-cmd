@@ -1410,6 +1410,351 @@ export const sequences = {
       },
     ],
   },
+
+  sys: {
+    displayName: {
+      en_US: 'System & File Attributes',
+      fa: 'سیستم و مشخصات فایل',
+      de: 'System & Dateiattribute',
+    },
+    about: {
+      en_US: 'File attributes, PATH resolution, directory stack, and process monitoring',
+      fa: 'صفات فایل، پیمایش مسیرها، استک دایرکتوری و مدیریت پردازش‌ها',
+      de: 'Dateiattribute, PATH-Suche, Verzeichnis-Stack und Prozessüberwachung',
+    },
+    levels: [
+      {
+        id: 'sys-attrib',
+        name: {
+          en_US: 'File Attributes (ATTRIB)',
+          fa: 'صفات فایل (ATTRIB)',
+          de: 'Dateiattribute (ATTRIB)',
+        },
+        hint: {
+          en_US: 'Run `attrib +r config.ini` to protect the settings file.',
+          fa: 'دستور `attrib +r config.ini` را اجرا کن تا فایل فقط‌خواندنی شود.',
+          de: 'Führe `attrib +r config.ini` aus, um die Datei zu schützen.',
+        },
+        about: {
+          en_US: 'Set read-only, hidden, or system flags on critical files',
+          fa: 'تنظیم نشان‌های فقط‌خواندنی، مخفی یا سیستمی برای فایل‌های حساس',
+          de: 'Schreibschutz- oder versteckte Attribute setzen',
+        },
+        startFS: withHome({ 'config.ini': '[settings]\nmode=production\n' }),
+        goalFS: withHome({ 'config.ini': '[settings]\nmode=production\n' }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'attrib +r config.ini',
+        goalCommands: ['attrib +r config.ini'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## File Attributes (`ATTRIB`)',
+                    '',
+                    'Windows files carry metadata flags such as **R** (Read-Only), **H** (Hidden), **A** (Archive), and **S** (System).',
+                    '',
+                    'Use `attrib +r <file>` to lock a configuration file against accidental modification or deletion.',
+                    '',
+                    '```',
+                    'attrib +r config.ini',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'sys-where',
+        name: {
+          en_US: 'Finding Programs (WHERE)',
+          fa: 'یافتن برنامه‌ها (WHERE)',
+          de: 'Programme finden (WHERE)',
+        },
+        hint: {
+          en_US: 'Run `where cmd > cmd_path.txt` to save the executable path.',
+          fa: 'دستور `where cmd > cmd_path.txt` را اجرا کن تا مسیر ذخیره شود.',
+          de: 'Führe `where cmd > cmd_path.txt` aus.',
+        },
+        about: {
+          en_US: 'Locate executable files across system PATH directories',
+          fa: 'یافتن فایل‌های اجرایی در دایرکتوری‌های متغیر PATH',
+          de: 'Ausführbare Dateien im PATH suchen',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({ 'cmd_path.txt': 'C:\\Windows\\System32\\cmd.exe\n' }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'where cmd > cmd_path.txt',
+        goalCommands: ['where cmd > cmd_path.txt'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Program Discovery (`WHERE`)',
+                    '',
+                    'The `where` command scans every folder listed in the `%PATH%` environment variable to locate where an executable actually lives.',
+                    '',
+                    'Save the path of `cmd` into `cmd_path.txt` using redirection.',
+                    '',
+                    '```',
+                    'where cmd > cmd_path.txt',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'sys-pushpop',
+        name: {
+          en_US: 'Directory Stack (PUSHD / POPD)',
+          fa: 'استک دایرکتوری (PUSHD / POPD)',
+          de: 'Verzeichnis-Stack (PUSHD / POPD)',
+        },
+        hint: {
+          en_US: 'Run `pushd Documents && echo backup>bk.txt && popd`.',
+          fa: 'دستور `pushd Documents && echo backup>bk.txt && popd` را اجرا کن.',
+          de: 'Führe `pushd Documents && echo backup>bk.txt && popd` aus.',
+        },
+        about: {
+          en_US: 'Navigate folders using a LIFO directory stack',
+          fa: 'پیمایش پوشه‌ها با استفاده از پشته دایرکتوری (LIFO)',
+          de: 'Ordner mit dem Verzeichnis-Stack wechseln',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({ Documents: { 'todo.txt': '1. practice dir\n2. practice cd\n', 'bk.txt': 'backup\n' } }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'pushd Documents && echo backup>bk.txt && popd',
+        goalCommands: ['pushd Documents && echo backup>bk.txt && popd'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Directory Stack (`PUSHD` / `POPD`)',
+                    '',
+                    'Instead of remembering your previous path when jumping to another folder, `pushd <dir>` stores your current directory on a stack, and `popd` returns you back instantly.',
+                    '',
+                    'Enter `Documents`, write `backup` into `bk.txt`, and pop back to your starting folder.',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'sys-tasks',
+        name: {
+          en_US: 'Process Management (TASKKILL)',
+          fa: 'مدیریت پردازش‌ها (TASKKILL)',
+          de: 'Prozessverwaltung (TASKKILL)',
+        },
+        hint: {
+          en_US: 'Inspect with `tasklist` and terminate with `taskkill /im node.exe /f`.',
+          fa: 'با `tasklist` پردازش‌ها را ببین و با `taskkill /im node.exe /f` پردازش معلق را ببند.',
+          de: 'Prüfe mit `tasklist` und beende mit `taskkill /im node.exe /f`.',
+        },
+        about: {
+          en_US: 'Inspect running tasks and terminate misbehaving processes',
+          fa: 'مشاهده پردازش‌های سیستم و بستن فرآیندهای قفل‌شده با نام یا PID',
+          de: 'Laufende Prozesse überwachen und beenden',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({}),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'taskkill /im node.exe /f',
+        goalCommands: ['taskkill /im node.exe /f'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Managing Processes (`TASKLIST` & `TASKKILL`)',
+                    '',
+                    'When a process stops responding or consumes resources in production, you inspect it with `tasklist` and terminate it forcefully with `taskkill /im <name> /f`.',
+                    '',
+                    'Run `taskkill /im node.exe /f` to terminate the rogue node process.',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    ],
+  },
+
+  batch: {
+    displayName: {
+      en_US: 'Scripting & Automation',
+      fa: 'اسکریپت‌نویسی و اتوماسیون',
+      de: 'Skripterstellung & Automatisierung',
+    },
+    about: {
+      en_US: 'Conditional branches, data stream sorting, and capstone deployment',
+      fa: 'شروط منطقی، مرتب‌سازی داده‌ها و پروژه استقرار نهایی',
+      de: 'Bedingte Logik, Daten-Sortierung und Produktions-Deployment',
+    },
+    levels: [
+      {
+        id: 'batch-if',
+        name: {
+          en_US: 'Conditional Logic (IF EXIST)',
+          fa: 'منطق شرطی (IF EXIST)',
+          de: 'Bedingte Logik (IF EXIST)',
+        },
+        hint: {
+          en_US: 'Run `if exist lock.tmp del lock.tmp`.',
+          fa: 'دستور `if exist lock.tmp del lock.tmp` را اجرا کن.',
+          de: 'Führe `if exist lock.tmp del lock.tmp` aus.',
+        },
+        about: {
+          en_US: 'Execute commands conditionally based on file presence',
+          fa: 'اجرای شرطی فرامین بر اساس وجود یا عدم وجود فایل در سیستم',
+          de: 'Befehle bedingt nach Existenz einer Datei ausführen',
+        },
+        startFS: withHome({ 'lock.tmp': 'locked\n', 'app.log': 'system ready\n' }),
+        goalFS: withHome({ 'app.log': 'system ready\n' }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'if exist lock.tmp del lock.tmp',
+        goalCommands: ['if exist lock.tmp del lock.tmp'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Conditional Processing (`IF EXIST`)',
+                    '',
+                    'Robust batch scripts must never fail when a file is absent. The `if exist <file> <command>` statement guards actions dynamically.',
+                    '',
+                    'Check for `lock.tmp` and delete it safely if present.',
+                    '',
+                    '```',
+                    'if exist lock.tmp del lock.tmp',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-sort',
+        name: {
+          en_US: 'Sorting Data Streams (SORT)',
+          fa: 'مرتب‌سازی جریان داده (SORT)',
+          de: 'Datenströme sortieren (SORT)',
+        },
+        hint: {
+          en_US: 'Run `sort /r scores.txt > ranking.txt`.',
+          fa: 'دستور `sort /r scores.txt > ranking.txt` را اجرا کن.',
+          de: 'Führe `sort /r scores.txt > ranking.txt` aus.',
+        },
+        about: {
+          en_US: 'Sort lines in reverse order and pipe processed output',
+          fa: 'مرتب‌سازی خطوط داده به صورت معکوس و هدایت خروجی به فایل',
+          de: 'Zeilen absteigend sortieren und weiterleiten',
+        },
+        startFS: withHome({ 'scores.txt': '10\n45\n90\n20\n' }),
+        goalFS: withHome({ 'scores.txt': '10\n45\n90\n20\n', 'ranking.txt': '90\n45\n20\n10\n' }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'sort /r scores.txt > ranking.txt',
+        goalCommands: ['sort /r scores.txt > ranking.txt'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Stream Sorting (`SORT /R`)',
+                    '',
+                    'The `sort` command arranges textual data alphabetically or numerically. The `/r` switch reverses the sort order.',
+                    '',
+                    'Sort `scores.txt` in descending order into `ranking.txt`.',
+                    '',
+                    '```',
+                    'sort /r scores.txt > ranking.txt',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-master',
+        name: {
+          en_US: 'Capstone: Production Deployment',
+          fa: 'چالش نهایی: استقرار پروداکشن',
+          de: 'Capstone: Produktions-Deployment',
+        },
+        hint: {
+          en_US: 'Run `md release && copy app.js release && attrib +r release\\app.js && if exist cache.tmp del cache.tmp`.',
+          fa: 'دستور `md release && copy app.js release && attrib +r release\\app.js && if exist cache.tmp del cache.tmp` را اجرا کن.',
+          de: 'Führe den vollständigen Deployment-Befehl aus.',
+        },
+        about: {
+          en_US: 'Full production workflow: directory creation, copying, attribute locking, and conditional cleanup',
+          fa: 'سناریوی کامل استقرار پروداکشن: ساخت پوشه، کپی فایل، قفل ویژگی‌ها و پاک‌سازی شرطی',
+          de: 'Vollständiger automatisierter Bereitstellungsworkflow',
+        },
+        startFS: withHome({ 'app.js': 'console.log("ready");\n', 'cache.tmp': 'cache\n' }),
+        goalFS: withHome({ 'app.js': 'console.log("ready");\n', release: { 'app.js': 'console.log("ready");\n' } }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'md release && copy app.js release && attrib +r release\\app.js && if exist cache.tmp del cache.tmp',
+        goalCommands: ['md release && copy app.js release && attrib +r release\\app.js && if exist cache.tmp del cache.tmp'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Capstone: Production Deployment',
+                    '',
+                    'You are now operating at **full expert level**. Chain the final production release steps together:',
+                    '',
+                    '1. Create the `release` folder (`md release`)',
+                    '2. Copy `app.js` into `release` (`copy app.js release`)',
+                    '3. Lock `release\\app.js` as read-only (`attrib +r release\\app.js`)',
+                    '4. Conditionally clean temporary cache files (`if exist cache.tmp del cache.tmp`)',
+                    '',
+                    'Chain the entire sequence with `&&` or execute each step cleanly.',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    ],
+  },
 };
 
 /**
