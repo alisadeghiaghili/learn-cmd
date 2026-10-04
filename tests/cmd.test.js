@@ -483,5 +483,24 @@ test('if exist and if string==string execute conditional branches', async () => 
   executeLine('if "a"=="a" echo match>>result.txt', { fs });
   assert.ok(fs.readFile('result.txt').includes('match'));
 });
+test('date /t and time /t output formatted date and time', async () => {
+  const { executeLine } = await import('../js/shell.js');
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const fs = new VirtualFileSystem();
 
+  const dateRes = executeLine('date /t', { fs });
+  assert.ok(dateRes.ok);
+  assert.ok(dateRes.lines.length > 0);
+  // MM/DD/YYYY format
+  assert.match(dateRes.lines[0], /\d{2}\/\d{2}\/\d{4}/);
 
+  const timeRes = executeLine('time /t', { fs });
+  assert.ok(timeRes.ok);
+  assert.ok(timeRes.lines.length > 0);
+  // HH:MM AM/PM format
+  assert.match(timeRes.lines[0], /\d{2}:\d{2} (AM|PM)/);
+
+  const chainedRes = executeLine('date /t & time /t', { fs });
+  assert.ok(chainedRes.ok);
+  assert.equal(chainedRes.lines.length, 2);
+});

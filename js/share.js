@@ -28,12 +28,12 @@ export function shareMessageLinkedIn(ctx) {
   const c = ctx.curriculum;
   const golfPart =
     ctx.commands !== null
-      ? ` Solved in ${ctx.commands} command${ctx.commands === 1 ? '' : 's'} (par ${ctx.par}).`
+      ? ` Solved in ${ctx.commands} command${ctx.commands === 1 ? '' : 's'} (target: ${ctx.par} cmds).`
       : '';
   const parts = [
     `🎯 Cleared "${ctx.levelName}" (${ctx.levelId}) on learn-cmd!${golfPart}`,
     '',
-    `Learning the Windows command line and cmd.exe through an interactive live filesystem visualizer and command golf.`,
+    `Learning the Windows command line and cmd.exe through an interactive live filesystem visualizer.`,
     '',
     `Progress: ${c.solvedCount} of ${c.total} levels solved (${c.percent}% completed).`,
     '',
@@ -50,7 +50,7 @@ export function shareMessageLinkedIn(ctx) {
  */
 export function shareMessageX(ctx) {
   const c = ctx.curriculum;
-  const golfPart = ctx.commands !== null ? ` in ${ctx.commands}/${ctx.par} cmds` : '';
+  const golfPart = ctx.commands !== null ? ` in ${ctx.commands} cmds (target: ${ctx.par})` : '';
   const text = `Just solved "${ctx.levelName}"${golfPart} on learn-cmd! (${c.solvedCount}/${c.total} levels clear) 💻\n${SHARE_URL}`;
   return text;
 }

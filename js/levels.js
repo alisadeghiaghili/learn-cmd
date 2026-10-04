@@ -1398,7 +1398,7 @@ export const sequences = {
                     '    run.txt      -> "ok"',
                     '```',
                     '',
-                    'Golf target: **4 commands**. Reset is your friend.',
+                    'Target: **4 commands**. Reset is your friend.',
                   ],
                 },
               },
@@ -1427,6 +1427,54 @@ export const sequences = {
       de: 'Dateiattribute, PATH-Suche, Verzeichnis-Stack und Prozessüberwachung',
     },
     levels: [
+      {
+        id: 'sys-datetime',
+        name: {
+          en_US: 'System Date & Time (DATE / TIME)',
+          fa: 'تاریخ و زمان سیستم (DATE / TIME)',
+          de: 'Systemdatum & Uhrzeit (DATE / TIME)',
+        },
+        hint: {
+          en_US: 'Run `date /t & time /t` to query the current system date and clock.',
+          fa: 'دستور `date /t & time /t` را برای مشاهده تاریخ و ساعت سیستم اجرا کن.',
+          de: 'Führe `date /t & time /t` aus.',
+        },
+        about: {
+          en_US: 'Query system date and time stamps for logging and scripts',
+          fa: 'مشاهده و ثبت زمان سیستم با دستورات DATE و TIME برای لاگ‌ها و اسکریپت‌ها',
+          de: 'Systemdatum und Uhrzeit für Protokolle und Skripte abfragen',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({}),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'date /t & time /t',
+        goalCommands: ['date /t & time /t'],
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## System Date & Time (`DATE` / `TIME`)',
+                    '',
+                    'In real-world deployment scripts and CI/CD pipelines, recording **when** an operation happened is essential for audit trails and build logs.',
+                    '',
+                    'The `date /t` command outputs the current calendar date without waiting for user input, while `time /t` outputs the current system clock.',
+                    '',
+                    'Combine them with `&` to query both the system date and time.',
+                    '',
+                    '```',
+                    'date /t & time /t',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
       {
         id: 'sys-attrib',
         name: {

@@ -773,20 +773,33 @@ export const COMMANDS = {
   date: {
     usage: 'DATE [/T | date]',
     help: 'Displays or sets the date.',
-    fn() {
-      return [`The current date is: ${formatWinDate(Date.now()).slice(0, 10)}`];
+    fn(args) {
+      const d = new Date();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const formatted = `${mm}/${dd}/${yyyy}`;
+      if (args && args.some((a) => a.toUpperCase() === '/T')) {
+        return [formatted];
+      }
+      return [`The current date is: ${formatted}`];
     },
   },
 
   time: {
     usage: 'TIME [/T | time]',
     help: 'Displays or sets the system time.',
-    fn() {
+    fn(args) {
       const d = new Date();
+      const hours = d.getHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const h12 = hours % 12 || 12;
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      if (args && args.some((a) => a.toUpperCase() === '/T')) {
+        return [`${String(h12).padStart(2, '0')}:${mi} ${ampm}`];
+      }
       return [
-        `The current time is: ${String(d.getHours()).padStart(2, '0')}:${String(
-          d.getMinutes()
-        ).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(
+        `The current time is: ${String(hours).padStart(2, '0')}:${mi}:${String(d.getSeconds()).padStart(2, '0')}.${String(
           d.getMilliseconds()
         ).slice(0, 2)}`,
       ];

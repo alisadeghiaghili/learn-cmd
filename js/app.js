@@ -345,7 +345,11 @@ class App {
       const par = this.level.par || 1;
       this.titleEl.textContent = typeof u.titleLine === 'function'
         ? u.titleLine(this.level.id, name, par)
-        : `${name} (${this.level.id}) · Par ${par}`;
+        : loc === 'fa'
+          ? `${name} (${this.level.id}) · ${par} کامند`
+          : loc === 'de'
+            ? `${name} (${this.level.id}) · ${par} ${par === 1 ? 'Befehl' : 'Befehle'}`
+            : `${name} (${this.level.id}) · ${par} ${par === 1 ? 'command' : 'commands'}`;
     } else {
       this.titleEl.textContent = u.sandboxTitle || 'Free Sandbox — Virtual Drive C:';
     }
@@ -740,7 +744,11 @@ class App {
         ? u.idealForLevel(par)
         : underPar
           ? `**${cmds}** ${u.idealForLevelShort(par)}`
-          : `**${cmds}** ${cmds === 1 ? 'command' : 'commands'}. Ideal is ${par}. Still counts — you got there.`;
+          : loc === 'fa'
+            ? `**${cmds}** کامند (هدف: ${par} کامند). هرچند بیشتر شد اما مرحله با موفقیت تکمیل گردید.`
+            : loc === 'de'
+              ? `**${cmds}** Befehle (Ziel: ${par} Befehle). Trotzdem gemeistert!`
+              : `**${cmds}** ${cmds === 1 ? 'command' : 'commands'} (target: ${par} commands). Still counts — you got there.`;
 
     const share = buildShareTargets({
       levelName: lvl.name[loc] || lvl.name.en_US || lvl.id,
@@ -998,7 +1006,7 @@ class App {
             </div>
             <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
             <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
-            <p><strong>۲۹</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
+            <p><strong>۳۰</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
           ` : loc === 'de' ? `
             <p>Interaktives <strong>Windows CMD</strong> Tutorial — Von 0 bis Experten-Level (>90/100).</p>
             <div class="quality-card">
@@ -1019,7 +1027,7 @@ class App {
             </div>
             <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
             <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
-            <p><strong>29</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
+            <p><strong>30</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
           ` : `
             <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — from absolute zero to 90+/100 expert mastery.</p>
             <div class="quality-card">
@@ -1040,7 +1048,7 @@ class App {
             </div>
             <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
             <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
-            <p><strong>29</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
+            <p><strong>30</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
           `}
         </div>
         <div class="modal-actions">
@@ -1144,10 +1152,16 @@ class App {
           const solved = prog && prog.solved;
           const best = prog?.best != null ? prog.best : '—';
           const name = lvl.name[loc] || lvl.name.en_US;
+          const scoreLabel =
+            loc === 'fa'
+              ? `بهترین ${best} / هدف ${lvl.par || 1} کامند`
+              : loc === 'de'
+                ? `Beste ${best} / Ziel ${lvl.par || 1} Befehle`
+                : `best ${best} / target ${lvl.par || 1} cmds`;
           return `
             <li class="level-item ${solved ? 'solved' : ''}" data-level="${lvl.id}">
               <span class="level-name">${escapeHtml(name)}</span>
-              <span class="level-golf">best ${best} / par ${lvl.par || 1}</span>
+              <span class="level-golf">${escapeHtml(scoreLabel)}</span>
             </li>
           `;
         })
