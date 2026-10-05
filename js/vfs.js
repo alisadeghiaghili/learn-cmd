@@ -152,6 +152,7 @@ class VirtualFileSystem {
     this.processes = null;
     /** @type {string[] | null} */
     this.dirStack = null;
+    this.delayedExpansion = false;
     this.load(spec || defaultFsSpec());
   }
 
@@ -574,18 +575,72 @@ class VirtualFileSystem {
   }
 
   /**
-   * Expand %VAR% references in a string.
+   * Expand %VAR% (and !VAR! if delayedExpansion is active) references in a string.
+   * Supports substrings (%VAR:~start,len%) and string replacement (%VAR:old=new%).
    *
    * @param {string} text
    * @returns {string}
    */
   expandEnv(text) {
-    return text.replace(/%([^%]+)%/g, (match, name) => {
-      const val = this.getEnv(name);
-      if (val !== null) return val;
-      if (String(name).toLowerCase() === 'errorlevel') return '0';
-      return match;
+    if (!text || typeof text !== 'string') return text;
+
+    const evalVarExpr = (raw) => {
+      const colonIdx = raw.indexOf(':');
+      if (colonIdx === -1) {
+        const val = this.getEnv(raw);
+        if (val !== null) return val;
+        if (String(raw).toLowerCase() === 'errorlevel') return this.getEnv('ERRORLEVEL') || '0';
+        return null;
+      }
+
+      const varName = raw.slice(0, colonIdx);
+      let baseVal = this.getEnv(varName);
+      if (baseVal === null && String(varName).toLowerCase() === 'errorlevel') {
+        baseVal = this.getEnv('ERRORLEVEL') || '0';
+      }
+      if (baseVal === null) return null;
+
+      const mod = raw.slice(colonIdx + 1);
+      // Substring: ~start[,len]
+      if (mod.startsWith('~')) {
+        const parts = mod.slice(1).split(',');
+        const start = parseInt(parts[0], 10);
+        if (Number.isNaN(start)) return baseVal;
+        if (parts.length > 1) {
+          const len = parseInt(parts[1], 10);
+          if (len < 0) {
+            return baseVal.slice(start, len);
+          }
+          return baseVal.slice(start, start + len);
+        }
+        return baseVal.slice(start);
+      }
+
+      // Replacement: old=new
+      const eqIdx = mod.indexOf('=');
+      if (eqIdx !== -1) {
+        const oldStr = mod.slice(0, eqIdx);
+        const newStr = mod.slice(eqIdx + 1);
+        if (oldStr === '') return baseVal;
+        return baseVal.split(oldStr).join(newStr);
+      }
+
+      return baseVal;
+    };
+
+    let res = text.replace(/%([^%]+)%/g, (match, raw) => {
+      const val = evalVarExpr(raw);
+      return val !== null ? val : match;
     });
+
+    if (this.delayedExpansion) {
+      res = res.replace(/!([^!]+)!/g, (match, raw) => {
+        const val = evalVarExpr(raw);
+        return val !== null ? val : match;
+      });
+    }
+
+    return res;
   }
 
   /**

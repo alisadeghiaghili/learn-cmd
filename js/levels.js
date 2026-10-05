@@ -1651,6 +1651,121 @@ export const sequences = {
           },
         },
       },
+      {
+        id: 'sys-robocopy',
+        name: {
+          en_US: 'Enterprise File Sync (ROBOCOPY)',
+          fa: 'همگام‌سازی پیشرفته فایل‌ها (ROBOCOPY)',
+          de: 'Enterprise Datei-Synchronisation (ROBOCOPY)',
+        },
+        hint: {
+          en_US: 'Run `robocopy project backup /mir`.',
+          fa: 'دستور `robocopy project backup /mir` را اجرا کن.',
+          de: 'Führe `robocopy project backup /mir` aus.',
+        },
+        about: {
+          en_US: 'Mirror and sync entire directory structures with enterprise resilience',
+          fa: 'آینه‌سازی و همگام‌سازی شاخه‌های دایرکتوری با ابزار مقاومت‌پذیر Robocopy',
+          de: 'Verzeichnisse spiegeln und synchronisieren mit Robocopy',
+        },
+        startFS: withHome({
+          project: {
+            'app.js': 'console.log("prod");\n',
+            'style.css': 'body { margin: 0; }\n',
+            assets: { 'logo.svg': '<svg></svg>\n' },
+          },
+        }),
+        goalFS: withHome({
+          project: {
+            'app.js': 'console.log("prod");\n',
+            'style.css': 'body { margin: 0; }\n',
+            assets: { 'logo.svg': '<svg></svg>\n' },
+          },
+          backup: {
+            'app.js': 'console.log("prod");\n',
+            'style.css': 'body { margin: 0; }\n',
+            assets: { 'logo.svg': '<svg></svg>\n' },
+          },
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'robocopy project backup /mir',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Enterprise File Mirroring (`ROBOCOPY`)',
+                    '',
+                    'In enterprise Windows administration, `copy` and `xcopy` are superseded by **`ROBOCOPY`** (Robust File Copy). It handles network dropouts, preserves timestamps, and can mirror entire directory trees.',
+                    '',
+                    'The `/MIR` flag mirrors a directory tree (equivalent to `/E` plus purging deleted files from destination).',
+                    '',
+                    'Mirror the `project` folder into `backup` now:',
+                    '',
+                    '```',
+                    'robocopy project backup /mir',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'sys-admin',
+        name: {
+          en_US: 'Security ACLs & Disk Tools (ICACLS / FSUTIL)',
+          fa: 'امنیت، دسترسی‌ها و ابزارهای سیستم (ICACLS / FSUTIL)',
+          de: 'Sicherheits-ACLs & Festplatten-Tools (ICACLS / FSUTIL)',
+        },
+        hint: {
+          en_US: 'Run `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)`.',
+          fa: 'دستور `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)` را اجرا کن.',
+          de: 'Führe `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)` aus.',
+        },
+        about: {
+          en_US: 'Manage Access Control Lists and generate pre-sized filesystem files',
+          fa: 'مدیریت مجوزهای دسترسی فایل (ACL) و ساخت فایل‌های آزمایشی دیسک',
+          de: 'Zugriffskontrolllisten verwalten und Testdateien erzeugen',
+        },
+        startFS: withHome({
+          'report.docx': 'confidential\n',
+        }),
+        goalFS: withHome({
+          'report.docx': 'confidential\n',
+          'disktest.bin': '0'.repeat(1024),
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Access Control Lists & Disk Diagnostics',
+                    '',
+                    'System administrators manage file security permissions using **`icacls`** (e.g. `/grant Users:(R)`) and pre-allocate benchmark disk files using **`fsutil`**.',
+                    '',
+                    '1. Pre-allocate a 1024-byte benchmark file: `fsutil file createnew disktest.bin 1024`',
+                    '2. Grant Read permissions to Users on `report.docx`: `icacls report.docx /grant Users:(R)`',
+                    '',
+                    '```',
+                    'fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
     ],
   },
 
@@ -1898,6 +2013,163 @@ export const sequences = {
                     '',
                     '```',
                     'echo md dist>build.bat & echo copy src\\index.js dist>>build.bat & build.bat',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-delayed',
+        name: {
+          en_US: 'Delayed Expansion & String Slicing',
+          fa: 'گسترش تاخیری متغیرها و دستکاری رشته‌ها',
+          de: 'Verzögerte Erweiterung & String-Manipulation',
+        },
+        hint: {
+          en_US: 'Run `set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%`.',
+          fa: 'دستور `set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%` را اجرا کن.',
+          de: 'Führe `set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%` aus.',
+        },
+        about: {
+          en_US: 'Master variable substrings (%VAR:~0,4%), string replacement, and runtime expansion',
+          fa: 'تسلط بر برش رشته‌ها (%VAR:~0,4%)، جایگزینی عبارات و ارزیابی در زمان اجرا',
+          de: 'String-Slicing, Textersetzung und dynamische Variablen-Erweiterung',
+        },
+        startFS: withHome({
+          'deploy_2026.txt': 'ready for deployment\n',
+        }),
+        goalFS: withHome({
+          'deploy_2026.txt': 'ready for deployment\n',
+          'deploy_2026.bak': 'ready for deployment\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Substrings, Replacements & Delayed Expansion',
+                    '',
+                    'In professional batch scripting, string manipulation is a core technique:',
+                    '- **Substring Slicing:** `%VAR:~start,len%` (e.g. `%DATE:~-4%` extracts the year)',
+                    '- **String Replacement:** `%VAR:old=new%` (e.g. `%FILE:.txt=.bak%` changes extension)',
+                    '- **Delayed Expansion:** `setlocal enabledelayedexpansion` allows `!VAR!` to update inside loop blocks without parse-time freezing.',
+                    '',
+                    'Create a backup of `deploy_2026.txt` using variable replacement:',
+                    '',
+                    '```',
+                    'set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-for-f',
+        name: {
+          en_US: 'Parsing Files & Output (FOR /F)',
+          fa: 'پارس کردن فایل‌ها و خروجی با FOR /F',
+          de: 'Dateien & Ausgabe parsen (FOR /F)',
+        },
+        hint: {
+          en_US: 'Run `for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt`.',
+          fa: 'دستور `for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt` را اجرا کن.',
+          de: 'Führe `for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt` aus.',
+        },
+        about: {
+          en_US: 'Parse structured text, CSV files, and command output with tokens and delimiters',
+          fa: 'استخراج ستون‌ها و پردازش ساختاریافته فایل‌های CSV و متنی با FOR /F',
+          de: 'Strukturierte Daten und Befehlsausgaben mit FOR /F verarbeiten',
+        },
+        startFS: withHome({
+          'users.csv': 'Alice,engineer\nBob,designer\n',
+        }),
+        goalFS: withHome({
+          'users.csv': 'Alice,engineer\nBob,designer\n',
+          'staff.txt': 'Alice:engineer\nBob:designer\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Token Parsing with `FOR /F`',
+                    '',
+                    '**`FOR /F`** is the workhorse of Windows text processing. It parses files line-by-line, splitting on delimiters (`delims=,`) and extracting specific fields (`tokens=1,2` mapped to `%a` and `%b`).',
+                    '',
+                    'Parse `users.csv` and append formatted records `Alice:engineer` into `staff.txt`:',
+                    '',
+                    '```',
+                    'for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'batch-func',
+        name: {
+          en_US: 'Modular Subroutines (%~dp0 & CALL :label)',
+          fa: 'توابع، زیرروال‌ها و موقعیت اسکریپت (%~dp0)',
+          de: 'Modulare Funktionen (%~dp0 & CALL :label)',
+        },
+        hint: {
+          en_US: 'Run `build.bat` to invoke the modular subroutine.',
+          fa: 'دستور `build.bat` را اجرا کن تا زیرروال ماژولار فراخوانی شود.',
+          de: 'Führe `build.bat` aus.',
+        },
+        about: {
+          en_US: 'Write maintainable batch files using internal functions, GOTO :EOF, and script-relative paths',
+          fa: 'توسعه اسکریپت‌های ماژولار با زیرروال‌های داخلی، خروج تمیز با GOTO :EOF و مسیر اسکریپت',
+          de: 'Modulare Batch-Skripte mit Unterfunktionen und relativen Pfaden',
+        },
+        startFS: withHome({
+          'build.bat': '@echo off\ncall :make_dir\necho completed\ngoto :eof\n\n:make_dir\nmd build\necho binary>build\\app.bin\nexit /b 0\n',
+        }),
+        goalFS: withHome({
+          'build.bat': '@echo off\ncall :make_dir\necho completed\ngoto :eof\n\n:make_dir\nmd build\necho binary>build\\app.bin\nexit /b 0\n',
+          build: {
+            'app.bin': 'binary\n',
+          },
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'build.bat',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Functions & Script Locality in Batch',
+                    '',
+                    'Production batch scripts avoid spaghetti code by defining internal subroutines invoked via **`CALL :label`** and returned with **`GOTO :EOF`** or **`EXIT /B [code]`**.',
+                    '',
+                    'Additionally, **`%~dp0`** guarantees that paths resolve relative to where the script is located on disk, regardless of what the user\'s current working directory is.',
+                    '',
+                    'Execute `build.bat` now to see function calls in action:',
+                    '',
+                    '```',
+                    'build.bat',
                     '```',
                   ],
                 },

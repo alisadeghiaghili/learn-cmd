@@ -979,6 +979,119 @@ export const dialogsFa = {
     ],
   },
 
+  'sys-robocopy': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## همگام‌سازی و آینه‌سازی پیشرفته سازمانی (`ROBOCOPY`)',
+            '',
+            'در مدیریت سرورها و سیستم‌های انترپرایز ویندوز، ابزارهای قدیمی مثل `copy` و `xcopy` جای خود را به **`ROBOCOPY`** (Robust File Copy) داده‌اند. این ابزار در برابر قطعی‌های شبکه تاب‌آور است، متادیتا و مهرهای زمانی را حفظ می‌کند و قادر به شبیه‌سازی کامل دایرکتوری‌هاست.',
+            '',
+            'سوییچ `/MIR` یک دایرکتوری را دقیقاً آینه‌سازی (Mirror) می‌کند (معادل سوییچ `/E` به همراه حذف فایل‌های اضافه در مقصد).',
+            '',
+            'پوشه `project` را در پوشه `backup` آینه‌سازی کن:',
+            '',
+            '```',
+            'robocopy project backup /mir',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'sys-admin': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## کنترل دسترسی (ACLs) و ابزارهای عیب‌یابی دیسک (`ICACLS` / `FSUTIL`)',
+            '',
+            'مدیران سیستم برای پیکربندی دسترسی‌های امنیتی فایل‌ها و پوشه‌ها از **`icacls`** (مثل `/grant Users:(R)`) استفاده می‌کنند و برای بنچمارک یا تست فضای ذخیره‌سازی، فایل‌هایی با اندازه دقیق را از طریق **`fsutil`** می‌سازند.',
+            '',
+            '۱. ایجاد فایل آزمایشی ۱۰۲۴ بایتی: `fsutil file createnew disktest.bin 1024`',
+            '۲. اعطای مجوز فقط‌خواندنی به گروه کاربران: `icacls report.docx /grant Users:(R)`',
+            '',
+            '```',
+            'fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-delayed': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## برش رشته‌ها، جایگزینی عبارات و گسترش تاخیری متغیرها',
+            '',
+            'در اسکریپت‌نویسی پیشرفته Batch، کار با متغیرها فراتر از خواندن ساده است:',
+            '- **برش رشته (Substring):** `%VAR:~start,len%` (مثلاً `%DATE:~-4%` برای استخراج سال)',
+            '- **جایگزینی در رشته (Search & Replace):** `%VAR:old=new%` (مثلاً `%FILE:.txt=.bak%` برای تغییر پسوند)',
+            '- **گسترش تاخیری (Delayed Expansion):** دستور `setlocal enabledelayedexpansion` اجازه می‌دهد مقدار متغیرها داخل حلقه‌ها و بلاک‌ها با `!VAR!` در زمان اجرا به‌روزرسانی شود و در زمان پارس قفل نماند.',
+            '',
+            'با جایگزینی پسوند در متغیر، یک نسخه پشتیبان از `deploy_2026.txt` تهیه کن:',
+            '',
+            '```',
+            'set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-for-f': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## پردازش توکن‌ها و پارس کردن فایل‌ها با `FOR /F`',
+            '',
+            'دستور **`FOR /F`** قدرتمندترین ابزار ویندوز برای پردازش فایل‌های متنی و خروجی فرامین است. این دستور خط به خط فایل را می‌خواند، بر اساس جداکننده (`delims=,`) تقسیم می‌کند و بخش‌های مشخص‌شده (`tokens=1,2`) را به متغیرهای متوالی مانند `%a` و `%b` اختصاص می‌دهد.',
+            '',
+            'فایل `users.csv` را پردازش کن و اطلاعات پرسنل را با ساختار `Alice:engineer` در فایل `staff.txt` بنویس:',
+            '',
+            '```',
+            'for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'batch-func': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## ساختار ماژولار، توابع داخلی و موقعیت اسکریپت (`%~dp0` و `CALL :label`)',
+            '',
+            'برای جلوگیری از کدنویسی نامنظم در اسکریپت‌های بزرگ، توابع و زیرروال‌های داخلی تعریف می‌شوند که با **`CALL :label`** صدا زده شده و با **`GOTO :EOF`** یا **`EXIT /B [code]`** خاتمه می‌یابند.',
+            '',
+            'همچنین شبه‌متغیر **`%~dp0`** مسیر پوشه‌ای که خود اسکریپت در آن قرار دارد را برمی‌گرداند تا مستقل از دایرکتوری جاری کاربر، فایل‌ها به‌درستی آدرس‌دهی شوند.',
+            '',
+            'اسکریپت `build.bat` را اجرا کن تا فراخوانی زیرروال ماژولار را ببینی:',
+            '',
+            '```',
+            'build.bat',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
   'batch-master': {
     childViews: [
       {
@@ -1971,6 +2084,40 @@ export const LEVEL_METADATA = {
       fieldNotes: ['`taskkill /f /im prozess.exe` beendet blockierte Aufgaben sofort.'],
     },
   },
+  'sys-robocopy': {
+    en: {
+      objective: 'Mirror the project directory into backup: `robocopy project backup /mir`.',
+      learning: ['Enterprise filesystem mirroring with ROBOCOPY', 'Preserving timestamps and syncing directory trees with /MIR'],
+      fieldNotes: ['`robocopy /mir` deletes files in the destination that no longer exist in the source, keeping targets in exact sync.'],
+    },
+    fa: {
+      objective: 'آینه‌سازی دایرکتوری پروژه در پوشه پشتیبان: `robocopy project backup /mir`.',
+      learning: ['آینه‌سازی و کپی سازمانی با دستور ROBOCOPY', 'حفظ مهرهای زمانی و همگام‌سازی کامل شاخه‌ها با سوییچ /MIR'],
+      fieldNotes: ['سوییچ `/mir` فایل‌های حذف‌شده در مبدا را از مقصد نیز پاک می‌کند تا دو پوشه کاملاً یکسان باشند.'],
+    },
+    de: {
+      objective: 'Spiegle das Verzeichnis mit `robocopy project backup /mir`.',
+      learning: ['Dateisynchronisation für Unternehmen mit ROBOCOPY', 'Exakte Verzeichnisspiegelung mit /MIR'],
+      fieldNotes: ['`robocopy /mir` hält Zielverzeichnisse exakt synchron inklusive Löschungen.'],
+    },
+  },
+  'sys-admin': {
+    en: {
+      objective: 'Pre-allocate a benchmark file and configure permissions: `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)`.',
+      learning: ['Access Control Lists (ACLs) management with ICACLS', 'Filesystem diagnostics and file pre-allocation with FSUTIL'],
+      fieldNotes: ['`icacls` is crucial for auditing and enforcing least-privilege security permissions on Windows files.'],
+    },
+    fa: {
+      objective: 'تخصیص فایل با اندازه مشخص و تنظیم مجوزها: `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)`.',
+      learning: ['مدیریت لیست‌های کنترل دسترسی (ACL) با دستور ICACLS', 'تست و عیب‌یابی فایل‌سیستم و ساخت فایل با حجم معین توسط FSUTIL'],
+      fieldNotes: ['دستور `icacls` ابزار اصلی اعمال سیاست‌های امنیتی و حداقل دسترسی در ویندوز است.'],
+    },
+    de: {
+      objective: 'Erstelle eine Testdatei und passe Berechtigungen an: `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)`.',
+      learning: ['Verwaltung von Zugriffskontrolllisten mit ICACLS', 'Dateisystem-Diagnose und Platzreservierung mit FSUTIL'],
+      fieldNotes: ['`icacls` ist unverzichtbar für die Durchsetzung von Least-Privilege-Sicherheitsrichtlinien.'],
+    },
+  },
   'batch-if': {
     en: {
       objective: 'Run `if exist lock.tmp del lock.tmp` for safe conditional file deletion.',
@@ -2054,6 +2201,57 @@ export const LEVEL_METADATA = {
       objective: 'Erstelle `build.bat` und führe das Skript aus.',
       learning: ['Wiederverwendbare .BAT-Skripte schreiben', 'Batch-Pipelines automatisieren'],
       fieldNotes: ['.BAT-Dateien fassen mehrere Befehle für reibungslose CI/CD-Abläufe zusammen.'],
+    },
+  },
+  'batch-delayed': {
+    en: {
+      objective: 'Leverage string manipulation to clone files: `set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%`.',
+      learning: ['Substring slicing (`%VAR:~start,len%`) and string replacement (`%VAR:old=new%`)', 'Runtime variable evaluation with delayed expansion (`!VAR!`)'],
+      fieldNotes: ['`setlocal enabledelayedexpansion` prevents loop variables from freezing at parse-time.'],
+    },
+    fa: {
+      objective: 'استفاده از جایگزینی رشته برای پشتیبان‌گیری: `set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%`.',
+      learning: ['برش زیررشته (`%VAR:~start,len%`) و جایگزینی عبارات (`%VAR:old=new%`)', 'ارزیابی متغیرها در زمان اجرا با گسترش تاخیری (`!VAR!`)'],
+      fieldNotes: ['دستور `setlocal enabledelayedexpansion` مانع از قفل شدن مقدار متغیرها در هنگام تفسیر اسکریپت می‌شود.'],
+    },
+    de: {
+      objective: 'Nutze String-Ersetzung zum Erstellen eines Backups: `set FILE=deploy_2026.txt && copy %FILE% %FILE:.txt=.bak%`.',
+      learning: ['Substring-Slicing (`%VAR:~start,len%`) und Textersetzung (`%VAR:alt=neu%`)', 'Dynamische Variablenauswertung mit verzögerter Erweiterung (`!VAR!`)'],
+      fieldNotes: ['`setlocal enabledelayedexpansion` verhindert das Einfrieren von Schleifenvariablen beim Parsen.'],
+    },
+  },
+  'batch-for-f': {
+    en: {
+      objective: 'Parse delimited records and format output: `for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt`.',
+      learning: ['Line-by-line file parsing with FOR /F', 'Token extraction and custom delimiters (`delims=`, `tokens=`)'],
+      fieldNotes: ['`FOR /F` seamlessly processes CSVs, registry exports, and command outputs.'],
+    },
+    fa: {
+      objective: 'پردازش سطرهای تفکیک‌شده و قالب‌بندی خروجی: `for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt`.',
+      learning: ['پارس کردن خط‌به‌خط فایل‌ها با FOR /F', 'استخراج توکن‌ها و مشخص کردن جداکننده‌های اختصاصی (`delims=`, `tokens=`)'],
+      fieldNotes: ['دستور `FOR /F` ابزار ایده‌آل پردازش فایل‌های CSV، خروجی سایر دستورات و لاگ‌های سیستمی است.'],
+    },
+    de: {
+      objective: 'Verarbeite CSV-Einträge mit `for /f "tokens=1,2 delims=," %a in (users.csv) do echo %a:%b>>staff.txt`.',
+      learning: ['Zeilenweises Parsen von Dateien mit FOR /F', 'Token-Extraktion und Trennzeichen (`delims=`, `tokens=`)'],
+      fieldNotes: ['`FOR /F` verarbeitet CSVs, Logdateien und Befehlsausgaben mühelos.'],
+    },
+  },
+  'batch-func': {
+    en: {
+      objective: 'Execute the modular script: `build.bat`.',
+      learning: ['Internal subroutines with CALL :label and GOTO :EOF', 'Path locality using %~dp0 and clean exit with EXIT /B'],
+      fieldNotes: ['`%~dp0` resolves to the directory containing the running batch file, preventing working directory errors.'],
+    },
+    fa: {
+      objective: 'اجرای اسکریپت ماژولار: `build.bat`.',
+      learning: ['توابع و زیرروال‌های داخلی با CALL :label و خروج با GOTO :EOF', 'مسیردهی محلی با %~dp0 و بازگشت تمیز با EXIT /B'],
+      fieldNotes: ['شبه‌متغیر `%~dp0` مسیر دایرکتوری دربرگیرنده اسکریپت را مشخص می‌کند و مانع خطاهای تغییر CWD می‌شود.'],
+    },
+    de: {
+      objective: 'Führe das modulare Skript aus: `build.bat`.',
+      learning: ['Interne Funktionen mit CALL :label und GOTO :EOF', 'Skript-relative Pfade mit %~dp0 und Beenden mit EXIT /B'],
+      fieldNotes: ['`%~dp0` verweist stets auf das Verzeichnis des Skripts und verhindert Pfadfehler.'],
     },
   },
   'batch-master': {

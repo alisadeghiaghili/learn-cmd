@@ -1396,17 +1396,201 @@ export const COMMANDS = {
     usage: 'ROBOCOPY source destination [file [file]...] [options]',
     help: 'Robust File and Folder Copy for Windows.',
     fn(args, ctx, raw) {
-      const res = COMMANDS.xcopy.fn(args, ctx, raw);
+      if (args.length < 2) {
+        return [
+          '   ROBOCOPY     ::     Robust File Copy for Windows',
+          'ERROR : Invalid Parameter #1',
+          'Usage : ROBOCOPY source destination [file [file]...] [options]',
+        ];
+      }
+      const isMir = args.some((a) => /^\/mir$/i.test(a));
+      const isMove = args.some((a) => /^\/move$/i.test(a));
+      const isE = isMir || args.some((a) => /^\/e$/i.test(a));
+      const cleanArgs = args.filter((a) => !a.startsWith('/'));
+      const src = cleanArgs[0] || '';
+      const dest = cleanArgs[1] || '';
+
+      const res = isMove
+        ? COMMANDS.move.fn([src, dest], ctx, raw)
+        : COMMANDS.xcopy.fn([src, dest, ...(isE ? ['/e'] : [])], ctx, raw);
+
       return [
         '-------------------------------------------------------------------------------',
         '   ROBOCOPY     ::     Robust File Copy for Windows',
         '-------------------------------------------------------------------------------',
+        `  Started : ${formatWinDate(Date.now())}`,
+        `   Source : ${src}`,
+        `     Dest : ${dest}`,
+        `    Files : *.*`,
+        `  Options : ${isMir ? '/MIR ' : ''}${isMove ? '/MOVE ' : ''}${isE ? '/E ' : ''}`,
+        '-------------------------------------------------------------------------------',
         ...res,
+        '-------------------------------------------------------------------------------',
         '               Total    Copied   Skipped  Mismatch    FAILED    Extras',
         '    Dirs :         1         1         0         0         0         0',
         '   Files :         1         1         0         0         0         0',
         '   Speed :             1024000 Bytes/sec.',
       ];
+    },
+  },
+
+  icacls: {
+    usage: 'ICACLS name [/grant[:r] User:perm] [/deny User:perm] [/reset] [/t]',
+    help: 'Displays or modifies access control lists (ACLs) for files and directories.',
+    fn(args, ctx) {
+      const target = args[0];
+      if (!target) return ['The syntax of the command is incorrect.'];
+      const targetNode = ctx.fs.resolve(target);
+      if (!targetNode) {
+        return [`${target}: The system cannot find the file specified.`];
+      }
+      const absTarget = ctx.fs.cwd.endsWith('\\') ? ctx.fs.cwd + targetNode.name : ctx.fs.cwd + '\\' + targetNode.name;
+      const hasGrant = args.some((a) => /^\/grant/i.test(a));
+      const hasDeny = args.some((a) => /^\/deny/i.test(a));
+      const hasReset = args.some((a) => /^\/reset/i.test(a));
+      if (hasGrant || hasDeny || hasReset) {
+        return [
+          `processed file: ${absTarget}`,
+          'Successfully processed 1 files; Failed processing 0 files',
+        ];
+      }
+      return [
+        `${absTarget} BUILTIN\\Administrators:(I)(F)`,
+        `               NT AUTHORITY\\SYSTEM:(I)(F)`,
+        `               BUILTIN\\Users:(I)(RX)`,
+        'Successfully processed 1 files; Failed processing 0 files',
+      ];
+    },
+  },
+
+  fsutil: {
+    usage: 'FSUTIL file createnew <filename> <length> | fsinfo drives',
+    help: 'Performs tasks that are related to file allocation tables (FAT) and NTFS file systems.',
+    fn(args, ctx) {
+      if (args.length === 0) {
+        return [
+          '---- FSUTIL Commands Supported ----',
+          'file          File specific commands',
+          'fsinfo        File system information',
+        ];
+      }
+      const sub = args[0].toLowerCase();
+      if (sub === 'fsinfo') {
+        return ['Drives: C:\\'];
+      }
+      if (sub === 'file' && args[1]?.toLowerCase() === 'createnew') {
+        const name = args[2];
+        const len = parseInt(args[3] || '0', 10);
+        if (!name || Number.isNaN(len)) return ['Usage: fsutil file createnew <filename> <length>'];
+        ctx.fs.writeFile(name, '0'.repeat(len));
+        const full = ctx.fs.cwd.endsWith('\\') ? ctx.fs.cwd + name : ctx.fs.cwd + '\\' + name;
+        return [`File ${full} is created`];
+      }
+      return [`The command ${args.join(' ')} is not recognized by FSUTIL.`];
+    },
+  },
+
+  net: {
+    usage: 'NET [USER | LOCALGROUP | START | STOP | SHARE | USE]',
+    help: 'Used to manage network settings, user accounts, and local services.',
+    fn(args) {
+      if (args.length === 0) {
+        return ['The syntax of this command is: NET [ ACCOUNTS | COMPUTER | CONFIG | FILE | GROUP | HELP | LOCALGROUP | SHARE | START | STOP | USE | USER ]'];
+      }
+      const sub = args[0].toLowerCase();
+      if (sub === 'user') {
+        if (args.length === 1) {
+          return [
+            'User accounts for \\\\WORKSTATION',
+            '-------------------------------------------------------------------------------',
+            'Administrator            DefaultAccount           Guest',
+            'student                  WDAGUtilityAccount',
+            'The command completed successfully.',
+          ];
+        }
+        const u = args[1];
+        return [
+          `User name                    ${u}`,
+          'Full Name                    Student User',
+          'Comment                      Interactive Learner Account',
+          'Account active               Yes',
+          'Account expires              Never',
+          'Password last set            10/01/2026 12:00:00 PM',
+          'Password required            No',
+          'Local Group Memberships      *Users',
+          'Global Group memberships     *None',
+          'The command completed successfully.',
+        ];
+      }
+      if (sub === 'localgroup') {
+        return [
+          'Aliases for \\\\WORKSTATION',
+          '-------------------------------------------------------------------------------',
+          '*Administrators',
+          '*Guests',
+          '*Users',
+          'The command completed successfully.',
+        ];
+      }
+      if (sub === 'share') {
+        return [
+          'Share name   Resource                        Remark',
+          '-------------------------------------------------------------------------------',
+          'C$           C:\\                             Default share',
+          'IPC$                                         Remote IPC',
+          'The command completed successfully.',
+        ];
+      }
+      if (sub === 'start' || sub === 'stop') {
+        const s = args[1] || 'Service';
+        return [`The ${s} service was ${sub === 'start' ? 'started' : 'stopped'} successfully.`];
+      }
+      return ['The command completed successfully.'];
+    },
+  },
+
+  schtasks: {
+    usage: 'SCHTASKS [/Create | /Delete | /Query | /Run | /End]',
+    help: 'Enables an administrator to create, delete, query, change, run and end scheduled tasks.',
+    fn(args) {
+      if (args.length === 0 || args.some((a) => /^\/query$/i.test(a))) {
+        return [
+          'Folder: \\',
+          'TaskName                                 Next Run Time          Status',
+          '======================================== ====================== ===============',
+          'DailyBackup                              10/06/2026 03:00:00 AM Ready',
+          'CleanTemp                                10/06/2026 04:00:00 AM Ready',
+        ];
+      }
+      if (args.some((a) => /^\/create$/i.test(a))) {
+        return ['SUCCESS: The scheduled task has been successfully created.'];
+      }
+      if (args.some((a) => /^\/run$/i.test(a))) {
+        return ['SUCCESS: Attempted to run the scheduled task.'];
+      }
+      return ['SUCCESS: The task operation completed.'];
+    },
+  },
+
+  setlocal: {
+    usage: 'SETLOCAL [ENABLEDELAYEDEXPANSION | DISABLEDELAYEDEXPANSION | ENABLEEXTENSIONS]',
+    help: 'Begins localization of environment changes in a batch file.',
+    fn(args, ctx) {
+      if (args.some((a) => /enabledelayedexpansion/i.test(a))) {
+        ctx.fs.delayedExpansion = true;
+      } else if (args.some((a) => /disabledelayedexpansion/i.test(a))) {
+        ctx.fs.delayedExpansion = false;
+      }
+      return [];
+    },
+  },
+
+  endlocal: {
+    usage: 'ENDLOCAL',
+    help: 'Ends localization of environment changes in a batch file.',
+    fn(args, ctx) {
+      ctx.fs.delayedExpansion = false;
+      return [];
     },
   },
 

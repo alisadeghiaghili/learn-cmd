@@ -785,3 +785,74 @@ test('semantic goal verification accepts valid alternative commands and steps', 
   assert.ok(dateTimeDiff.ok);
 });
 
+test('FOR /F parses structured files, strings, and command output', async () => {
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const { executeLine } = await import('../js/shell.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+  fs.writeFile('C:\\Users\\student\\data.csv', 'Alice,Admin,active\nBob,User,pending\n');
+
+  const res = executeLine('for /f "tokens=1,2 delims=," %a in (data.csv) do echo User=%a Role=%b', { fs });
+  assert.ok(res.ok);
+  assert.ok(res.lines.includes('User=Alice Role=Admin'));
+  assert.ok(res.lines.includes('User=Bob Role=User'));
+
+  // Command output parsing with single quotes
+  const resCmd = executeLine('for /f %i in (\'dir /b\') do echo Item: %i', { fs });
+  assert.ok(resCmd.ok);
+  assert.ok(resCmd.lines.some((l) => l.includes('Item: data.csv')));
+});
+
+test('Variable substrings, replacements, and delayed expansion', async () => {
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const { executeLine } = await import('../js/shell.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  fs.setEnv('FILE', 'report_2026.txt');
+  assert.equal(fs.expandEnv('%FILE:~0,6%'), 'report');
+  assert.equal(fs.expandEnv('%FILE:~-4%'), '.txt');
+  assert.equal(fs.expandEnv('%FILE:.txt=.bak%'), 'report_2026.bak');
+
+  // Delayed expansion
+  executeLine('setlocal enabledelayedexpansion', { fs });
+  fs.setEnv('COUNTER', '10');
+  assert.equal(fs.expandEnv('count is !COUNTER!'), 'count is 10');
+  executeLine('endlocal', { fs });
+});
+
+test('SysAdmin commands: robocopy, icacls, fsutil, net, schtasks', async () => {
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const { executeLine } = await import('../js/shell.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  // fsutil file createnew
+  const fsuRes = executeLine('fsutil file createnew dummy.dat 512', { fs });
+  assert.ok(fsuRes.ok);
+  assert.ok(Boolean(fs.resolve('C:\\Users\\student\\dummy.dat')));
+
+  // icacls
+  const aclRes = executeLine('icacls dummy.dat /grant Users:(R)', { fs });
+  assert.ok(aclRes.ok);
+  assert.ok(aclRes.lines.some((l) => l.includes('Successfully processed 1 files')));
+
+  // robocopy /mir
+  fs.ensurePath('C:\\Users\\student\\docs');
+  fs.writeFile('C:\\Users\\student\\docs\\file.txt', 'hello');
+  fs.ensurePath('C:\\Users\\student\\backup');
+  const roboRes = executeLine('robocopy C:\\Users\\student\\docs C:\\Users\\student\\backup /mir', { fs });
+  assert.ok(roboRes.ok);
+  assert.ok(roboRes.lines.some((l) => l.includes('ROBOCOPY')));
+
+  // net user & schtasks
+  const netRes = executeLine('net user', { fs });
+  assert.ok(netRes.ok);
+  assert.ok(netRes.lines.some((l) => l.includes('student')));
+
+  const taskRes = executeLine('schtasks /query', { fs });
+  assert.ok(taskRes.ok);
+  assert.ok(taskRes.lines.some((l) => l.includes('DailyBackup')));
+});
+
+

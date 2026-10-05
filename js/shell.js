@@ -7,6 +7,7 @@
 'use strict';
 
 import { lookupCommand, tokenize, cmdError, COMMANDS } from './commands.js';
+import { normalizePath } from './vfs.js';
 
 /** @typedef {import('./commands.js').CmdContext} CmdContext */
 
@@ -187,6 +188,116 @@ function executeSimple(segment, ctx, stdinText) {
     return [];
   }
 
+  // FOR /F ["options"] %var IN (source) DO command
+  const forFMatch = command.match(/^for\s+\/f(?:\s+"([^"]*)")?\s+(%{1,2}[a-zA-Z])\s+in\s*\(([^)]+)\)\s+do\s+(.+)$/i);
+  if (forFMatch) {
+    const optStr = forFMatch[1] || '';
+    const varToken = forFMatch[2];
+    const baseVarChar = varToken.slice(-1);
+    const isDoublePercent = varToken.startsWith('%%');
+    const sourceRaw = forFMatch[3].trim();
+    const doCmd = forFMatch[4].trim();
+
+    let delims = ' \t';
+    let tokenList = [1];
+    let skipCount = 0;
+    let eolChar = ';';
+
+    if (optStr) {
+      const eolMatch = optStr.match(/eol=([^\s"])/i);
+      if (eolMatch) eolChar = eolMatch[1];
+      const skipMatch = optStr.match(/skip=(\d+)/i);
+      if (skipMatch) skipCount = parseInt(skipMatch[1], 10) || 0;
+      const delimsMatch = optStr.match(/delims=([^"]*?)(?:\s+tokens=|\s+skip=|\s+eol=|$)/i);
+      if (delimsMatch) {
+        delims = delimsMatch[1] === '' ? '' : delimsMatch[1];
+      }
+      const tokensMatch = optStr.match(/tokens=([0-9,\-*]+)/i);
+      if (tokensMatch) {
+        tokenList = [];
+        const rawToks = tokensMatch[1].split(',');
+        for (const rt of rawToks) {
+          if (rt === '*') tokenList.push('*');
+          else if (rt.includes('-')) {
+            const [s, e] = rt.split('-').map(Number);
+            for (let k = s; k <= e; k += 1) tokenList.push(k);
+          } else {
+            const n = parseInt(rt, 10);
+            if (!Number.isNaN(n)) tokenList.push(n);
+          }
+        }
+      }
+    }
+
+    let inputLines = [];
+    if (sourceRaw.startsWith("'") && sourceRaw.endsWith("'")) {
+      const sub = sourceRaw.slice(1, -1);
+      inputLines = executePipeline(sub, ctx);
+    } else if (sourceRaw.startsWith('"') && sourceRaw.endsWith('"')) {
+      inputLines = [sourceRaw.slice(1, -1)];
+    } else {
+      const fileNames = sourceRaw.split(/[\s,]+/).filter(Boolean);
+      for (const fn of fileNames) {
+        try {
+          const abs = ctx.fs.resolve(fn.replace(/^"|"$/g, ''));
+          if (abs && abs.type === 'file') {
+            inputLines.push(...abs.content.split(/\r?\n/));
+          }
+        } catch {}
+      }
+    }
+
+    if (skipCount > 0) {
+      inputLines = inputLines.slice(skipCount);
+    }
+
+    const outLines = [];
+    for (const line of inputLines) {
+      const trimmed = line.trim();
+      if (!trimmed || (eolChar && trimmed.startsWith(eolChar))) continue;
+
+      let parts = [];
+      if (delims === '') {
+        parts = [line];
+      } else {
+        const delimRegex = new RegExp(`[${delims.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}]+`);
+        parts = line.split(delimRegex).filter(Boolean);
+      }
+
+      let subCmd = doCmd;
+      const varCharCode = baseVarChar.charCodeAt(0);
+
+      for (let tIdx = 0; tIdx < tokenList.length; tIdx += 1) {
+        const tokSpec = tokenList[tIdx];
+        const curVarChar = String.fromCharCode(varCharCode + tIdx);
+        const curVarPattern = isDoublePercent ? `%%${curVarChar}` : `%${curVarChar}`;
+        const curVarRegex = new RegExp(curVarPattern, 'g');
+
+        let val = '';
+        if (tokSpec === '*') {
+          val = parts.slice(tIdx).join(' ');
+        } else if (typeof tokSpec === 'number') {
+          val = parts[tokSpec - 1] || '';
+        }
+        subCmd = subCmd.replace(curVarRegex, val);
+      }
+
+      const res = executePipeline(subCmd, ctx);
+      outLines.push(...res);
+    }
+
+    if (redirect) {
+      const text = outLines.join('\n') + (outLines.length ? '\n' : '');
+      if (redirect.mode === 'append') {
+        ctx.fs.appendFile(redirect.target, text);
+      } else {
+        ctx.fs.writeFile(redirect.target, text);
+      }
+      return [];
+    }
+    return outLines;
+  }
+
   // FOR command support: FOR [%/%%]var IN (set) DO command
   const forMatch = command.match(/^for\s+(\/l\s+)?(%{1,2}[a-zA-Z0-9_])\s+in\s*\(([^)]+)\)\s+do\s+(.+)$/i);
   if (forMatch) {
@@ -308,6 +419,10 @@ function executeSimple(segment, ctx, stdinText) {
     let pc = 0;
     let iterations = 0;
     const maxIterations = 2000;
+    const callStack = [];
+
+    const scriptNorm = normalizePath(scriptPath, ctx.fs.cwd);
+    const scriptFullDir = scriptNorm.includes('\\') ? scriptNorm.replace(/\\[^\\]+$/, '\\') : ctx.fs.cwd + '\\';
 
     while (pc < rawLines.length && iterations < maxIterations) {
       iterations += 1;
@@ -320,20 +435,62 @@ function executeSimple(segment, ctx, stdinText) {
         continue;
       }
 
-      // Replace batch parameters %0..%9, %*
+      // Check for EXIT /B
+      const exitBMatch = t.match(/^exit\s+\/b(?:\s+(\d+))?/i);
+      if (exitBMatch) {
+        const code = exitBMatch[1] ? parseInt(exitBMatch[1], 10) : 0;
+        ctx.fs.setEnv('ERRORLEVEL', String(code));
+        if (callStack.length > 0) {
+          pc = callStack.pop();
+          continue;
+        } else {
+          break;
+        }
+      }
+
+      // Check for CALL :label
+      const callLabelMatch = t.match(/^call\s+:([a-zA-Z0-9_\-]+)(.*)$/i);
+      if (callLabelMatch) {
+        const targetLabel = callLabelMatch[1].toLowerCase();
+        if (labelIndices.has(targetLabel)) {
+          callStack.push(pc);
+          pc = labelIndices.get(targetLabel) + 1;
+          continue;
+        }
+      }
+
+      // Replace batch parameters %0..%9, %* and modifiers
+      t = t.replace(/%~?dp0/gi, scriptFullDir);
       t = t.replace(/%0/g, scriptPath);
       t = t.replace(/%\*/g, scriptArgs.join(' '));
       for (let p = 1; p <= 9; p += 1) {
         const val = scriptArgs[p - 1] !== undefined ? scriptArgs[p - 1] : '';
-        const re = new RegExp(`%~?${p}`, 'g');
-        t = t.replace(re, val.replace(/^"|"$/g, ''));
+        const rawVal = val.replace(/^"|"$/g, '');
+        const filename = rawVal.split('\\').pop() || '';
+        const ext = filename.includes('.') ? '.' + filename.split('.').pop() : '';
+        const nameNoExt = ext ? filename.slice(0, -ext.length) : filename;
+
+        t = t.replace(new RegExp(`%~dp${p}`, 'gi'), scriptFullDir);
+        t = t.replace(new RegExp(`%~nx${p}`, 'gi'), filename);
+        t = t.replace(new RegExp(`%~n${p}`, 'gi'), nameNoExt);
+        t = t.replace(new RegExp(`%~x${p}`, 'gi'), ext);
+        t = t.replace(new RegExp(`%~f${p}`, 'gi'), normalizePath(rawVal, ctx.fs.cwd));
+        t = t.replace(new RegExp(`%~${p}`, 'g'), rawVal);
+        t = t.replace(new RegExp(`%${p}`, 'g'), val);
       }
 
       // Check for standalone GOTO
       const gotoMatch = t.match(/^goto\s+:?([a-zA-Z0-9_\-]+)$/i);
       if (gotoMatch) {
         const targetLabel = gotoMatch[1].toLowerCase();
-        if (targetLabel === 'eof') break;
+        if (targetLabel === 'eof') {
+          if (callStack.length > 0) {
+            pc = callStack.pop();
+            continue;
+          } else {
+            break;
+          }
+        }
         if (labelIndices.has(targetLabel)) {
           pc = labelIndices.get(targetLabel) + 1;
           continue;
@@ -350,7 +507,14 @@ function executeSimple(segment, ctx, stdinText) {
         const actualLines = res.lines.filter((l) => !l.startsWith('__GOTO__:'));
         outLines.push(...actualLines);
         const targetLabel = gotoSignal.replace('__GOTO__:', '').trim().replace(/^:/, '').toLowerCase();
-        if (targetLabel === 'eof') break;
+        if (targetLabel === 'eof') {
+          if (callStack.length > 0) {
+            pc = callStack.pop();
+            continue;
+          } else {
+            break;
+          }
+        }
         if (labelIndices.has(targetLabel)) {
           pc = labelIndices.get(targetLabel) + 1;
           continue;

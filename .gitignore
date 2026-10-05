@@ -3,3 +3,7 @@ output/
 .playwright-cli/
 .DS_Store
 *.log
+.agents/
+.claude/
+CLAUDE.md
+graphify-out/
