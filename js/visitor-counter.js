@@ -1,13 +1,16 @@
 /**
  * Visitor counter client with local deduplication and badge SVG parsing.
  * Fetches page visitor count and renders a clean numeric stat in the toolbar.
+ *
+ * Implements strict browser-level deduplication via localStorage (identical
+ * to learn-dvc) so that page reloads do not increment the counter, ensuring
+ * only unique visitors are counted.
  */
 
 'use strict';
 
-export const STORAGE_KEY = 'learn-cmd:visitor-count-cache';
-export const SESSION_KEY = 'learn-cmd:visitor-session-counted';
-export const BADGE_URL = 'https://api.visitorbadge.io/api/combined?path=learn-cmd';
+export const STORAGE_KEY = 'learn-cmd:visitor-count';
+export const BADGE_URL = 'https://api.visitorbadge.io/api/combined?path=alisadeghiaghili-learn-cmd';
 export const BASE_COUNT = 3;
 
 /**
@@ -68,15 +71,21 @@ export function getCachedVisitorCount() {
 }
 
 /**
- * Retrieves the visitor count, fetching fresh data from the server while
- * persisting the latest count in localStorage and falling back cleanly.
+ * Retrieves the visitor count, incrementing on the first visit per browser,
+ * while returning cached count on subsequent visits to count unique visitors.
  * Always ensures the displayed count starts from at least 3.
  *
  * @returns {Promise<number>}
  */
 export async function getVisitorCount() {
-  let cachedCount = getCachedVisitorCount() || BASE_COUNT;
+  // 1. Check local cache first: if already visited in this browser, return cached count
+  // to avoid re-fetching and artificially inflating visitor counts on page reload.
+  const cached = getCachedVisitorCount();
+  if (cached !== null) {
+    return cached;
+  }
 
+  // 2. First visit in this browser: fetch badge SVG from server
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
@@ -91,27 +100,27 @@ export async function getVisitorCount() {
     });
     clearTimeout(timeoutId);
 
-    if (!res.ok) return cachedCount;
+    if (!res.ok) return BASE_COUNT;
 
     const svg = await res.text();
     const parsed = parseVisitorBadgeSvg(svg);
 
-    if (parsed !== null) {
-      const count = Math.max(BASE_COUNT, parsed);
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ count, at: Date.now() })
-        );
-        sessionStorage.setItem(SESSION_KEY, '1');
-      } catch {
-        // quota or private mode
-      }
-      return count;
+    const count =
+      parsed !== null
+        ? Math.max(BASE_COUNT, BASE_COUNT + (parsed - 1))
+        : BASE_COUNT;
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ count, at: Date.now() })
+      );
+    } catch {
+      // quota or private mode
     }
 
-    return cachedCount;
+    return count;
   } catch {
-    return cachedCount;
+    return BASE_COUNT;
   }
 }

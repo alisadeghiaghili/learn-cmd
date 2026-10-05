@@ -333,6 +333,22 @@ test('parseVisitorBadgeSvg extracts count and handles scale suffixes and Persian
   assert.equal(parseVisitorBadgeSvg(''), null);
 });
 
+test('getVisitorCount respects local deduplication without re-fetching on repeat visits', async () => {
+  const { getVisitorCount, STORAGE_KEY } = await import('../js/visitor-counter.js');
+  const store = { [STORAGE_KEY]: JSON.stringify({ count: 7, at: Date.now() }) };
+  const origLocal = global.localStorage;
+  global.localStorage = {
+    getItem: (k) => store[k] || null,
+    setItem: (k, v) => { store[k] = v; },
+  };
+  try {
+    const count = await getVisitorCount();
+    assert.equal(count, 7);
+  } finally {
+    global.localStorage = origLocal;
+  }
+});
+
 test('buildShareTargets formats share messages and social links', async () => {
   const { buildShareTargets } = await import('../js/share.js');
   const dummyCurriculum = {
