@@ -380,11 +380,11 @@ class App {
   }
 
   async initVisitorCounter() {
-    this.cachedVisitorCount = 3;
+    this.cachedVisitorCount = 4;
     this.renderVisitorBadge();
     const count = await getVisitorCount();
     if (count !== null) {
-      this.cachedVisitorCount = Math.max(3, count);
+      this.cachedVisitorCount = Math.max(4, count);
       this.renderVisitorBadge();
     }
   }
@@ -392,7 +392,9 @@ class App {
   renderVisitorBadge() {
     if (this.cachedVisitorCount === null || !this.visitorStatEl || !this.visitorCountEl) return;
     this.visitorStatEl.title = ui().visitorsTitle || 'Total unique visitors';
-    this.visitorCountEl.textContent = this.cachedVisitorCount.toLocaleString('en-US');
+    this.visitorCountEl.textContent = this.cachedVisitorCount.toLocaleString(
+      getLocale() === 'fa' ? 'fa-IR' : getLocale() === 'de' ? 'de-DE' : 'en-US'
+    );
     this.visitorStatEl.hidden = false;
   }
 
