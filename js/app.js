@@ -25,7 +25,7 @@ import { TerminalView } from './terminal.js';
 import { launchConfetti, playFanfare } from './confetti.js';
 import { loadProgress, saveProgress, summarizeCurriculum, resumeLine } from './progress.js';
 import { buildShareTargets, shareWithClipboard, COFFEE_BUTTON_HTML, REPO_URL } from './share.js';
-import { getVisitorCount } from './visitor-counter.js';
+import { getVisitorCount, getCachedVisitorCount, BASE_COUNT } from './visitor-counter.js';
 import { formatUiHelpText, uiHelpModalHtml, startUiTour } from './ui-help.js';
 import { getLocale, setLocale, ui, localizeLevel, getDialogFa, LOCALES } from './i18n.js';
 
@@ -380,21 +380,23 @@ class App {
   }
 
   async initVisitorCounter() {
-    this.cachedVisitorCount = 4;
+    this.cachedVisitorCount = getCachedVisitorCount() || BASE_COUNT;
     this.renderVisitorBadge();
-    const count = await getVisitorCount();
-    if (count !== null) {
-      this.cachedVisitorCount = Math.max(4, count);
-      this.renderVisitorBadge();
+    try {
+      const count = await getVisitorCount();
+      if (typeof count === 'number' && Number.isFinite(count)) {
+        this.cachedVisitorCount = Math.max(BASE_COUNT, count);
+        this.renderVisitorBadge();
+      }
+    } catch {
+      // offline or adblock fallback
     }
   }
 
   renderVisitorBadge() {
     if (this.cachedVisitorCount === null || !this.visitorStatEl || !this.visitorCountEl) return;
     this.visitorStatEl.title = ui().visitorsTitle || 'Total unique visitors';
-    this.visitorCountEl.textContent = this.cachedVisitorCount.toLocaleString(
-      getLocale() === 'fa' ? 'fa-IR' : getLocale() === 'de' ? 'de-DE' : 'en-US'
-    );
+    this.visitorCountEl.textContent = this.cachedVisitorCount.toLocaleString('en-US');
     this.visitorStatEl.hidden = false;
   }
 
