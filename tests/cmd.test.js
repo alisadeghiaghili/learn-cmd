@@ -320,7 +320,7 @@ test('levelFromJson rejects incomplete payloads', async () => {
 
 test('parseVisitorBadgeSvg extracts count and handles scale suffixes and Persian/Arabic numerals', async () => {
   const { parseVisitorBadgeSvg, normalizeDigits, BASE_COUNT } = await import('../js/visitor-counter.js');
-  assert.equal(BASE_COUNT, 3);
+  assert.equal(BASE_COUNT, 4);
   assert.equal(normalizeDigits('۱۲۳۴۵۶۷۸۹۰'), '1234567890');
   assert.equal(normalizeDigits('١٢٣٤٥٦٧٨٩٠'), '1234567890');
   assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: 1,420</title></svg>'), 1420);

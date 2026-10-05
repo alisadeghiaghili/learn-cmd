@@ -9,9 +9,9 @@
 
 'use strict';
 
-export const STORAGE_KEY = 'learn-cmd:visitor-count';
-export const BADGE_URL = 'https://api.visitorbadge.io/api/combined?path=alisadeghiaghili-learn-cmd';
-export const BASE_COUNT = 3;
+export const STORAGE_KEY = 'learn-cmd:visitor-count-unique';
+export const BADGE_URL = 'https://api.visitorbadge.io/api/combined?path=alisadeghiaghili-learn-cmd-unique';
+export const BASE_COUNT = 4;
 
 /**
  * Normalizes Eastern Arabic and Persian numerals to Western digits (0-9).
