@@ -320,7 +320,7 @@ test('levelFromJson rejects incomplete payloads', async () => {
 
 test('parseVisitorBadgeSvg extracts count and handles scale suffixes and Persian/Arabic numerals', async () => {
   const { parseVisitorBadgeSvg, normalizeDigits, BASE_COUNT } = await import('../js/visitor-counter.js');
-  assert.equal(BASE_COUNT, 4);
+  assert.equal(BASE_COUNT, 44);
   assert.equal(normalizeDigits('۱۲۳۴۵۶۷۸۹۰'), '1234567890');
   assert.equal(normalizeDigits('١٢٣٤٥٦٧٨٩٠'), '1234567890');
   assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: 1,420</title></svg>'), 1420);
@@ -335,7 +335,7 @@ test('parseVisitorBadgeSvg extracts count and handles scale suffixes and Persian
 
 test('getVisitorCount respects local deduplication without re-fetching on repeat visits', async () => {
   const { getVisitorCount, STORAGE_KEY } = await import('../js/visitor-counter.js');
-  const store = { [STORAGE_KEY]: JSON.stringify({ count: 7, at: Date.now() }) };
+  const store = { [STORAGE_KEY]: JSON.stringify({ count: 70, at: Date.now() }) };
   const origLocal = global.localStorage;
   global.localStorage = {
     getItem: (k) => store[k] || null,
@@ -343,7 +343,7 @@ test('getVisitorCount respects local deduplication without re-fetching on repeat
   };
   try {
     const count = await getVisitorCount();
-    assert.equal(count, 7);
+    assert.equal(count, 70);
   } finally {
     global.localStorage = origLocal;
   }

@@ -10,8 +10,12 @@
 'use strict';
 
 export const STORAGE_KEY = 'learn-cmd:visitor-count-unique';
+export const LAST_VISIT_KEY = 'learn-cmd:last-visit-date';
+export const COUNT_API_BASE = 'https://countapi.mileshilliard.com/api/v1';
+export const COUNT_KEY = 'alisadeghiaghili-learn-cmd';
 export const BADGE_URL = 'https://api.visitorbadge.io/api/combined?path=alisadeghiaghili-learn-cmd-unique';
-export const BASE_COUNT = 4;
+export const HISTORICAL_OFFSET = 43;
+export const BASE_COUNT = 44;
 
 /**
  * Normalizes Eastern Arabic and Persian numerals to Western digits (0-9).
@@ -71,9 +75,40 @@ export function getCachedVisitorCount() {
 }
 
 /**
- * Retrieves the visitor count, incrementing on the first visit per browser,
- * while returning cached count on subsequent visits to count unique visitors.
- * Always ensures the displayed count starts from at least 3.
+ * Saves count to local cache.
+ *
+ * @param {number} count
+ * @returns {void}
+ */
+function cacheCount(count) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ count, at: Date.now() }));
+  } catch {}
+}
+
+/**
+ * Checks if the user already visited today (UTC day string).
+ *
+ * @returns {boolean}
+ */
+function isNewDailyVisit() {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const lastVisit = localStorage.getItem(LAST_VISIT_KEY);
+    if (lastVisit === today) {
+      return false;
+    }
+    localStorage.setItem(LAST_VISIT_KEY, today);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Retrieves the visitor count, incrementing on the first visit per day per browser,
+ * while returning cached / read-only count on subsequent visits to count unique visitors.
+ * Always ensures the displayed count starts from at least BASE_COUNT (44).
  *
  * @returns {Promise<number>}
  */
@@ -85,42 +120,55 @@ export async function getVisitorCount() {
     return cached;
   }
 
-  // 2. First visit in this browser: fetch badge SVG from server
+  const isNew = isNewDailyVisit();
+  const action = isNew ? 'hit' : 'get';
+
+  // 2. Try CountAPI (JSON, CORS enabled, fast, distinct get vs hit without uncontrolled increments)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-
-    const res = await fetch(BADGE_URL, {
-      cache: 'no-store',
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(`${COUNT_API_BASE}/${action}/${COUNT_KEY}`, {
       signal: controller.signal,
-      headers: {
-        Accept: 'image/svg+xml, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
+      headers: { Accept: 'application/json' },
     });
     clearTimeout(timeoutId);
-
-    if (!res.ok) return BASE_COUNT;
-
-    const svg = await res.text();
-    const parsed = parseVisitorBadgeSvg(svg);
-
-    const count =
-      parsed !== null
-        ? Math.max(BASE_COUNT, BASE_COUNT + (parsed - 1))
-        : BASE_COUNT;
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ count, at: Date.now() })
-      );
-    } catch {
-      // quota or private mode
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data?.value === 'number' && Number.isFinite(data.value) && data.value > 0) {
+        const total = Math.max(BASE_COUNT, data.value + HISTORICAL_OFFSET);
+        cacheCount(total);
+        return total;
+      }
     }
-
-    return count;
   } catch {
-    return BASE_COUNT;
+    // CountAPI network error or timeout, proceed to fallback
   }
+
+  // 3. Fallback to SVG Badge Provider ONLY on genuine new visits if CountAPI failed
+  if (isNew) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(BADGE_URL, {
+        cache: 'no-store',
+        signal: controller.signal,
+        headers: {
+          Accept: 'image/svg+xml, */*',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const svg = await res.text();
+        const parsed = parseVisitorBadgeSvg(svg);
+        if (parsed !== null && parsed > 0) {
+          const total = Math.max(BASE_COUNT, BASE_COUNT + (parsed - 1));
+          cacheCount(total);
+          return total;
+        }
+      }
+    } catch {}
+  }
+
+  return BASE_COUNT;
 }
