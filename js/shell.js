@@ -24,6 +24,13 @@ function splitOperators(line, operators) {
   let inQuotes = false;
   for (let i = 0; i < line.length; i += 1) {
     const ch = line[i];
+    if (ch === '^') {
+      if (i + 1 < line.length) {
+        current += line[i + 1];
+        i += 1;
+        continue;
+      }
+    }
     if (ch === '"') {
       inQuotes = !inQuotes;
       current += ch;
@@ -57,32 +64,49 @@ function splitOperators(line, operators) {
  * Split off redirection targets from a simple command.
  *
  * @param {string} segment
- * @returns {{ command: string, redirect: { mode: 'out' | 'append', target: string } | null, stdinFile: string | null }}
+ * @returns {{ command: string, redirect: { mode: 'out' | 'append', target: string, isError?: boolean, mergeStderr?: boolean } | null, stdinFile: string | null }}
  */
 function parseRedirection(segment) {
   let command = segment;
-  /** @type {{ mode: 'out' | 'append', target: string } | null} */
+  /** @type {{ mode: 'out' | 'append', target: string, isError?: boolean, mergeStderr?: boolean } | null} */
   let redirect = null;
   /** @type {string | null} */
   let stdinFile = null;
 
-  // > and >> (not >&1 etc.)
-  const appendMatch = command.match(/(.*?)>>\s*(\S.*)$/);
-  const outMatch = command.match(/(.*?)>\s*(\S.*)$/);
-  const inMatch = command.match(/(.*?)<\s*(\S.*)$/);
-
-  if (appendMatch && (!outMatch || appendMatch.index <= outMatch.index)) {
-    command = appendMatch[1];
-    redirect = { mode: 'append', target: appendMatch[2].trim().replace(/^"|"$/g, '') };
-  } else if (outMatch) {
-    command = outMatch[1];
-    redirect = { mode: 'out', target: outMatch[2].trim().replace(/^"|"$/g, '') };
+  let mergeStderr = false;
+  if (/(?:^|\s)2>&1\s*$/.test(command)) {
+    command = command.replace(/\s*2>&1\s*$/, '');
+    mergeStderr = true;
   }
+
+  // Handle 2> (stderr redirection)
+  const errMatch = command.match(/(.*?)(?:^|\s)2>>\s*(\S.*)$/);
+  const errOutMatch = command.match(/(.*?)(?:^|\s)2>\s*(\S.*)$/);
+  if (errMatch) {
+    command = errMatch[1];
+    redirect = { mode: 'append', target: errMatch[2].trim().replace(/^"|"$/g, ''), isError: true };
+  } else if (errOutMatch) {
+    command = errOutMatch[1];
+    redirect = { mode: 'out', target: errOutMatch[2].trim().replace(/^"|"$/g, ''), isError: true };
+  } else {
+    // > and >>
+    const appendMatch = command.match(/(.*?)>>\s*(\S.*)$/);
+    const outMatch = command.match(/(.*?)>\s*(\S.*)$/);
+
+    if (appendMatch && (!outMatch || appendMatch.index <= outMatch.index)) {
+      command = appendMatch[1];
+      redirect = { mode: 'append', target: appendMatch[2].trim().replace(/^"|"$/g, ''), mergeStderr };
+    } else if (outMatch) {
+      command = outMatch[1];
+      redirect = { mode: 'out', target: outMatch[2].trim().replace(/^"|"$/g, ''), mergeStderr };
+    }
+  }
+
+  const inMatch = command.match(/(.*?)<\s*(\S.*)$/);
   if (inMatch && inMatch[1] === command.trim()) {
     command = inMatch[1];
     stdinFile = inMatch[2].trim().replace(/^"|"$/g, '');
   } else if (inMatch) {
-    // stdin still useful
     const reparse = command.match(/^(.*?)<\s*(\S.*)$/);
     if (reparse) {
       command = reparse[1];
@@ -572,9 +596,33 @@ function executeSimple(segment, ctx, stdinText) {
     cmdCtx.stdin = ctx.fs.readFile(stdinFile);
   }
 
-  let lines = found.def.fn(args, cmdCtx, command);
+  let lines = [];
+  try {
+    lines = found.def.fn(args, cmdCtx, command);
+  } catch (err) {
+    if (redirect && (redirect.isError || redirect.mergeStderr)) {
+      const errMsg = err && err.message ? err.message : String(err);
+      const text = errMsg + (errMsg.endsWith('\n') ? '' : '\n');
+      if (redirect.mode === 'append') {
+        ctx.fs.appendFile(redirect.target, text);
+      } else {
+        ctx.fs.writeFile(redirect.target, text);
+      }
+      if (ctx.fs && typeof ctx.fs.setEnv === 'function') {
+        ctx.fs.setEnv('ERRORLEVEL', '1');
+      }
+      return [];
+    }
+    throw err;
+  }
 
   if (redirect) {
+    if (redirect.isError) {
+      if (redirect.mode === 'out') {
+        ctx.fs.writeFile(redirect.target, '');
+      }
+      return lines;
+    }
     const text = lines.join('\n') + (lines.length ? '\n' : '');
     if (redirect.mode === 'append') {
       ctx.fs.appendFile(redirect.target, text);
@@ -662,7 +710,9 @@ export function executeLine(line, ctx) {
       allLines.push(...out);
       ok = true;
       if (ctx.fs && typeof ctx.fs.setEnv === 'function') {
-        ctx.fs.setEnv('ERRORLEVEL', '0');
+        if (ctx.fs.getEnv('ERRORLEVEL') !== '1') {
+          ctx.fs.setEnv('ERRORLEVEL', '0');
+        }
       }
     } catch (err) {
       ok = false;
@@ -706,6 +756,14 @@ export function detectMeta(line) {
     'golf',
     'share',
     'help!',
+    'eli',
+    'explain',
+    'eli5',
+    'eli10',
+    'eli15',
+    'eli20',
+    'eliphd',
+    'depth',
   ]);
   if (!metaNames.has(name)) return null;
   // `show solution` is two tokens

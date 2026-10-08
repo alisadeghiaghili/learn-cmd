@@ -1234,6 +1234,60 @@ export const sequences = {
           },
         },
       },
+      {
+        id: 'pipes-stderr',
+        name: {
+          en_US: 'Error Redirection (2> & 2>&1)',
+          fa: 'هدایت خطای استاندارد (2> و 2>&1)',
+          de: 'Fehler-Umleitung (2> & 2>&1)',
+        },
+        hint: {
+          en_US: 'Run `type missing.txt 2> error.log` to redirect standard error.',
+          fa: 'دستور `type missing.txt 2> error.log` را برای هدایت خطای استاندارد اجرا کن.',
+          de: 'Führe `type missing.txt 2> error.log` aus.',
+        },
+        about: {
+          en_US: 'Redirect standard error stream (STDERR) to a separate file',
+          fa: 'هدایت جریان خطای استاندارد به فایل مجزا با استفاده از عملگر 2>',
+          de: 'Standard-Fehlerstrom (STDERR) in eine Datei umleiten',
+        },
+        startFS: withHome({
+          'notes.txt': 'all good\n',
+        }),
+        goalFS: withHome({
+          'notes.txt': 'all good\n',
+          'error.log': 'The system cannot find the file specified.\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'type missing.txt 2> error.log',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Standard Error Redirection (`2>` & `2>&1`)',
+                    '',
+                    'Commands communicate via two separate output streams:',
+                    '- **Stream 1 (STDOUT):** Normal command output (`>` or `>>`)',
+                    '- **Stream 2 (STDERR):** Error messages (`2>` or `2>>`)',
+                    '',
+                    'When a command fails, writing `2> error.log` isolates the error message from standard output.',
+                    '',
+                    'Capture the error of reading `missing.txt` into `error.log`:',
+                    '',
+                    '```',
+                    'type missing.txt 2> error.log',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
     ],
   },
 
@@ -1406,6 +1460,105 @@ export const sequences = {
                 type: 'ModalAlert',
                 options: {
                   markdowns: ['When the tree matches the goal, you pass. Good luck.'],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'adv-math',
+        name: {
+          en_US: 'Integer Arithmetic (SET /A)',
+          fa: 'محاسبات ریاضی و شمارنده‌ها (SET /A)',
+          de: 'Ganzzahl-Arithmetik (SET /A)',
+        },
+        hint: {
+          en_US: 'Run `set /a RESULT=40+2 & echo %RESULT%>math.txt`.',
+          fa: 'دستور `set /a RESULT=40+2 & echo %RESULT%>math.txt` را اجرا کن.',
+          de: 'Führe `set /a RESULT=40+2 & echo %RESULT%>math.txt` aus.',
+        },
+        about: {
+          en_US: 'Perform numeric math calculations and assign results to variables',
+          fa: 'انجام محاسبات ریاضی عددی با سوییچ /A در دستور SET',
+          de: 'Mathematische Berechnungen mit SET /A durchführen',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({
+          'math.txt': '42\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'set /a RESULT=40+2 & echo %RESULT%>math.txt',
+        par: 2,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Integer Math (`SET /A`)',
+                    '',
+                    'By default, environment variables store plain text strings. Adding the `/A` switch switches `SET` into numeric expression evaluator mode:',
+                    '',
+                    '```',
+                    'set /a NUM=10 + 5',
+                    'set /a NUM+=1',
+                    '```',
+                    '',
+                    'Calculate `40 + 2` and write the result `42` into `math.txt`:',
+                    '',
+                    '```',
+                    'set /a RESULT=40+2 & echo %RESULT%>math.txt',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'adv-escape',
+        name: {
+          en_US: 'Caret Escaping (^)',
+          fa: 'کاراکتر گریز و فرار از عملگرها (^)',
+          de: 'Caret-Escaping (^)',
+        },
+        hint: {
+          en_US: 'Run `echo apples ^& oranges>recipe.txt`.',
+          fa: 'دستور `echo apples ^& oranges>recipe.txt` را اجرا کن.',
+          de: 'Führe `echo apples ^& oranges>recipe.txt` aus.',
+        },
+        about: {
+          en_US: 'Escape special shell characters using the CMD caret symbol',
+          fa: 'چاپ نمادهای خاص مانند & و | با استفاده از کاراکتر گریز کلاهک ^',
+          de: 'Sonderzeichen mit dem Zirkumflex-Zeichen (^) maskieren',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({
+          'recipe.txt': 'apples & oranges\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'echo apples ^& oranges>recipe.txt',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Escaping Special Operators (`^`)',
+                    '',
+                    'In Windows CMD, symbols like `&`, `|`, `>`, and `<` have special meaning as operators. To treat them as plain literal text, prefix them with the **caret symbol (`^`)**.',
+                    '',
+                    'Write `apples & oranges` into `recipe.txt`:',
+                    '',
+                    '```',
+                    'echo apples ^& oranges>recipe.txt',
+                    '```',
+                  ],
                 },
               },
             ],
@@ -1758,6 +1911,100 @@ export const sequences = {
                     '',
                     '```',
                     'fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'sys-net',
+        name: {
+          en_US: 'Network Diagnostics (PING & IPCONFIG)',
+          fa: 'عیب‌یابی شبکه و تست اتصال (PING)',
+          de: 'Netzwerk-Diagnose (PING & IPCONFIG)',
+        },
+        hint: {
+          en_US: 'Run `ping 127.0.0.1 > ping.txt` to test loopback connectivity.',
+          fa: 'دستور `ping 127.0.0.1 > ping.txt` را برای تست اتصال کارت شبکه اجرا کن.',
+          de: 'Führe `ping 127.0.0.1 > ping.txt` aus.',
+        },
+        about: {
+          en_US: 'Inspect local network adapters and test loopback connectivity',
+          fa: 'بررسی کارت‌های شبکه و تست اتصال محلی لوپ‌بک با دستور PING',
+          de: 'Netzwerkadapter prüfen und Loopback-Verbindung testen',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({
+          'ping.txt': '\nPinging 127.0.0.1 [127.0.0.1] with 32 bytes of data:\nReply from 127.0.0.1: bytes=32 time=14ms TTL=117\nReply from 127.0.0.1: bytes=32 time=15ms TTL=117\nReply from 127.0.0.1: bytes=32 time=14ms TTL=117\nReply from 127.0.0.1: bytes=32 time=16ms TTL=117\n\nPing statistics for 127.0.0.1:\n    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),\nApproximate round trip times in milli-seconds:\n    Minimum = 14ms, Maximum = 16ms, Average = 15ms\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'ping 127.0.0.1 > ping.txt',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Network Diagnostics (`PING` & `IPCONFIG`)',
+                    '',
+                    'When diagnosing connectivity issues, `ipconfig` inspects your IP configuration and `ping` verifies reachability by sending ICMP packets.',
+                    '',
+                    'Ping your loopback adapter (`127.0.0.1`) and save the diagnostic report into `ping.txt`:',
+                    '',
+                    '```',
+                    'ping 127.0.0.1 > ping.txt',
+                    '```',
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'sys-reg',
+        name: {
+          en_US: 'Windows Registry Inspection (REG QUERY)',
+          fa: 'پیمایش رجیستری ویندوز (REG QUERY)',
+          de: 'Windows-Registry-Abfrage (REG QUERY)',
+        },
+        hint: {
+          en_US: 'Run `reg query HKLM\\Software\\Microsoft > reg.txt`.',
+          fa: 'دستور `reg query HKLM\\Software\\Microsoft > reg.txt` را اجرا کن.',
+          de: 'Führe `reg query HKLM\\Software\\Microsoft > reg.txt` aus.',
+        },
+        about: {
+          en_US: 'Query the Windows system configuration database (Registry)',
+          fa: 'کوئری گرفتن از پایگاه داده تنظیمات سیستم‌عامل (رجیستری)',
+          de: 'Die Windows-Konfigurationsdatenbank (Registry) abfragen',
+        },
+        startFS: withHome({}),
+        goalFS: withHome({
+          'reg.txt': '\nHKEY_LOCAL_MACHINE\\Software\\Microsoft\n    ProgramFilesDir    REG_SZ    C:\\Program Files\n    CommonFilesDir     REG_SZ    C:\\Program Files\\Common Files\n    InstallDate        REG_DWORD 0x66f0a000\n    CurrentVersion     REG_SZ    10.0.22631\n',
+        }),
+        startCwd: 'C:\\Users\\student',
+        solutionCommand: 'reg query HKLM\\Software\\Microsoft > reg.txt',
+        par: 1,
+        startDialog: {
+          en_US: {
+            childViews: [
+              {
+                type: 'ModalAlert',
+                options: {
+                  markdowns: [
+                    '## Windows Registry (`REG QUERY`)',
+                    '',
+                    'The Windows Registry is the hierarchical database that stores low-level operating system and software configurations.',
+                    '',
+                    'Use `reg query` to inspect the Microsoft software key and save the values into `reg.txt`:',
+                    '',
+                    '```',
+                    'reg query HKLM\\Software\\Microsoft > reg.txt',
                     '```',
                   ],
                 },

@@ -855,4 +855,71 @@ test('SysAdmin commands: robocopy, icacls, fsutil, net, schtasks', async () => {
   assert.ok(taskRes.lines.some((l) => l.includes('DailyBackup')));
 });
 
+test('ELI cognitive tiers and getEliForLevel provide comprehensive coverage', async () => {
+  const { ELI_DEPTHS, getEliForLevel, getPrimaryEliTierForLevel } = await import('../js/eli.js');
+  const { allLevels } = await import('../js/levels.js');
+
+  const depths = ['eli5', 'eli10', 'eli15', 'eli20', 'eliphd'];
+  assert.deepEqual(ELI_DEPTHS.map((d) => d.id), depths);
+
+  const levels = allLevels();
+  assert.equal(levels.length, 44, 'Curriculum must contain exactly 44 levels');
+
+  for (const lvl of levels) {
+    const tier = getPrimaryEliTierForLevel(lvl.id);
+    assert.ok(depths.includes(tier), `Invalid tier ${tier} for level ${lvl.id}`);
+
+    for (const lang of ['en', 'fa', 'de']) {
+      for (const d of depths) {
+        const eli = getEliForLevel(lvl.id, lang, d);
+        assert.ok(eli.metaphor && eli.metaphor.length > 0, `Missing metaphor for ${lvl.id} ${lang} ${d}`);
+        assert.ok(eli.explanation && eli.explanation.length > 0, `Missing explanation for ${lvl.id} ${lang} ${d}`);
+        assert.ok(eli.takeaway && eli.takeaway.length > 0, `Missing takeaway for ${lvl.id} ${lang} ${d}`);
+        assert.ok(eli.depthLabel && eli.depthLabel.length > 0, `Missing depthLabel for ${lvl.id} ${lang} ${d}`);
+      }
+    }
+  }
+});
+
+test('Caret character escaping and STDERR redirection work in shell', async () => {
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const { executeLine } = await import('../js/shell.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  // Caret escaping
+  const resEscape = executeLine('echo apples ^& oranges>recipe.txt', { fs });
+  assert.ok(resEscape.ok);
+  const content = fs.readFile('C:\\Users\\student\\recipe.txt');
+  assert.equal(content, 'apples & oranges\n');
+
+  // Stderr redirection
+  const resErr = executeLine('type nonexisting.txt 2> error.log', { fs });
+  assert.equal(resErr.ok, true);
+  assert.equal(fs.getEnv('ERRORLEVEL'), '1');
+  const errLog = fs.readFile('C:\\Users\\student\\error.log');
+  assert.ok(errLog && errLog.includes('cannot find the file'));
+});
+
+test('Networking diagnostics and Registry query commands work', async () => {
+  const { VirtualFileSystem } = await import('../js/vfs.js');
+  const { executeLine } = await import('../js/shell.js');
+  const fs = new VirtualFileSystem();
+  fs.cwd = 'C:\\Users\\student';
+
+  // Ping redirection
+  const resPing = executeLine('ping 127.0.0.1 > ping.txt', { fs });
+  assert.ok(resPing.ok);
+  const pingLog = fs.readFile('C:\\Users\\student\\ping.txt');
+  assert.ok(pingLog.includes('Pinging 127.0.0.1'));
+  assert.ok(pingLog.includes('Approximate round trip times'));
+
+  // Registry query
+  const resReg = executeLine('reg query HKLM\\Software\\Microsoft > reg.txt', { fs });
+  assert.ok(resReg.ok);
+  const regLog = fs.readFile('C:\\Users\\student\\reg.txt');
+  assert.ok(regLog.includes('HKEY_LOCAL_MACHINE\\Software\\Microsoft'));
+  assert.ok(regLog.includes('ProgramFilesDir'));
+});
+
 

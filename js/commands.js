@@ -1572,6 +1572,52 @@ export const COMMANDS = {
     },
   },
 
+  reg: {
+    usage: 'REG [QUERY | ADD | DELETE | COPY | SAVE | RESTORE | LOAD | UNLOAD | COMPARE | EXPORT | IMPORT | FLAGS]',
+    help: 'Registry Console Tool for Windows.',
+    fn(args) {
+      if (args.length === 0) {
+        return ['The syntax of this command is: REG [ QUERY | ADD | DELETE | COPY | SAVE | RESTORE | LOAD | UNLOAD | COMPARE | EXPORT | IMPORT | FLAGS ]'];
+      }
+      const sub = args[0].toLowerCase();
+      if (sub === 'query') {
+        const key = args[1] || 'HKLM\\Software\\Microsoft';
+        return [
+          '',
+          `HKEY_LOCAL_MACHINE\\Software\\Microsoft`,
+          '    ProgramFilesDir    REG_SZ    C:\\Program Files',
+          '    CommonFilesDir     REG_SZ    C:\\Program Files\\Common Files',
+          '    InstallDate        REG_DWORD 0x66f0a000',
+          '    CurrentVersion     REG_SZ    10.0.22631',
+        ];
+      }
+      if (sub === 'add') {
+        return ['The operation completed successfully.'];
+      }
+      if (sub === 'delete') {
+        return ['The operation completed successfully.'];
+      }
+      return ['The operation completed successfully.'];
+    },
+  },
+
+  netstat: {
+    usage: 'NETSTAT [-a] [-b] [-e] [-f] [-n] [-o] [-p proto] [-r] [-s] [-t] [-x] [-y] [interval]',
+    help: 'Displays protocol statistics and current TCP/IP network connections.',
+    fn(_args) {
+      return [
+        '',
+        'Active Connections',
+        '',
+        '  Proto  Local Address          Foreign Address        State',
+        '  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING',
+        '  TCP    0.0.0.0:445            0.0.0.0:0              LISTENING',
+        '  TCP    127.0.0.1:8080         0.0.0.0:0              LISTENING',
+        '  TCP    192.168.1.105:54321    93.184.216.34:443      ESTABLISHED',
+      ];
+    },
+  },
+
   setlocal: {
     usage: 'SETLOCAL [ENABLEDELAYEDEXPANSION | DISABLEDELAYEDEXPANSION | ENABLEEXTENSIONS]',
     help: 'Begins localization of environment changes in a batch file.',

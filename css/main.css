@@ -1685,3 +1685,201 @@ button.ghost,
     max-width: 100%;
   }
 }
+
+/* ELI Multi-depth Cognitive Framework */
+.eli-section {
+  margin: 12px 0 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.eli-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.eli-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--haze);
+}
+
+.eli-tabs {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 4px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.eli-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.eli-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.eli-tab.active {
+  background: var(--cmd-soft);
+  color: var(--cmd);
+  border: 1px solid var(--cmd-stroke);
+}
+
+.eli-card {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.eli-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.eli-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--cmd-soft);
+  color: var(--cmd);
+  border: 1px solid var(--cmd-stroke);
+}
+
+.eli-metaphor {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--warn);
+}
+
+.eli-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 6px 0 8px;
+}
+
+.eli-takeaway {
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: 6px 10px;
+  background: rgba(108, 203, 95, 0.08);
+  border-inline-start: 3px solid var(--ok);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.eli-takeaway strong {
+  color: var(--ok);
+}
+
+/* Cognitive depth filter bar in levels modal */
+.level-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--haze);
+  margin-inline-end: 4px;
+}
+
+.filter-chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
+  font-family: var(--ui);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.filter-chip.active {
+  background: var(--cmd-soft);
+  color: var(--cmd);
+  border-color: var(--cmd-stroke);
+  font-weight: 600;
+}
+
+.level-tier-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-inline-start: 6px;
+  vertical-align: middle;
+  border: 1px solid transparent;
+}
+
+.level-tier-badge.eli5 {
+  background: rgba(108, 203, 95, 0.15);
+  color: var(--ok);
+  border-color: rgba(108, 203, 95, 0.3);
+}
+
+.level-tier-badge.eli10 {
+  background: rgba(96, 205, 255, 0.15);
+  color: var(--cmd);
+  border-color: rgba(96, 205, 255, 0.3);
+}
+
+.level-tier-badge.eli15 {
+  background: rgba(252, 225, 0, 0.15);
+  color: var(--warn);
+  border-color: rgba(252, 225, 0, 0.3);
+}
+
+.level-tier-badge.eli20 {
+  background: rgba(175, 120, 255, 0.15);
+  color: #bf80ff;
+  border-color: rgba(175, 120, 255, 0.3);
+}
+
+.level-tier-badge.eliphd {
+  background: rgba(255, 153, 164, 0.15);
+  color: var(--err);
+  border-color: rgba(255, 153, 164, 0.3);
+}

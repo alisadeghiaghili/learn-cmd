@@ -28,6 +28,11 @@ import { buildShareTargets, shareWithClipboard, COFFEE_BUTTON_HTML, REPO_URL } f
 import { getVisitorCount, getCachedVisitorCount, BASE_COUNT } from './visitor-counter.js';
 import { formatUiHelpText, uiHelpModalHtml, startUiTour } from './ui-help.js';
 import { getLocale, setLocale, ui, localizeLevel, getDialogFa, LOCALES } from './i18n.js';
+import {
+  ELI_DEPTHS,
+  getEliForLevel,
+  getPrimaryEliTierForLevel,
+} from './eli.js';
 
 /** @typedef {import('./levels.js').Level} Level */
 
@@ -143,6 +148,11 @@ class App {
     this.solvedFlash = false;
     this.cachedVisitorCount = null;
     this.quizIndex = 0;
+    try {
+      this.eliDepth = localStorage.getItem('learn-cmd.eli') || 'eli15';
+    } catch (_) {
+      this.eliDepth = 'eli15';
+    }
 
     // DOM references
     this.treeEl = document.getElementById('fs-tree');
@@ -265,6 +275,33 @@ class App {
     this.langDropdownEl.classList.remove('is-open');
     this.langDropdownEl.hidden = true;
     if (this.langBtnEl) this.langBtnEl.setAttribute('aria-expanded', 'false');
+  }
+
+  setEliDepth(depth) {
+    if (['eli5', 'eli10', 'eli15', 'eli20', 'eliphd'].includes(depth)) {
+      this.eliDepth = depth;
+      try {
+        localStorage.setItem('learn-cmd.eli', depth);
+      } catch (_) {}
+      this.renderDock();
+    }
+  }
+
+  showEliExplanation(depth) {
+    const d = depth || this.eliDepth;
+    if (!this.level) {
+      this.terminal.push('meta', ui().noHintSandbox || 'Start a level to view cognitive explanations.');
+      return;
+    }
+    const loc = getLocale();
+    const eli = getEliForLevel(this.level.id, loc, d);
+    const label = ELI_DEPTHS[d]?.[loc] || ELI_DEPTHS[d]?.en || d.toUpperCase();
+    this.terminal.push('out', '══════════════════════════════════════════════════════');
+    this.terminal.push('out', `🎓 [${label}] — ${eli.metaphor}`);
+    this.terminal.push('out', '──────────────────────────────────────────────────────');
+    this.terminal.push('out', `${eli.explanation}`);
+    this.terminal.push('out', `💡 ${eli.takeaway}`);
+    this.terminal.push('out', '══════════════════════════════════════════════════════');
   }
 
   renderToolbar() {
@@ -539,9 +576,49 @@ class App {
       ? `<div class="par-note">${escapeHtml(u.stateNotes || 'State notes:')} ${escapeHtml(diff.missingPaths.slice(0, 3).join(' · '))}</div>`
       : '';
 
+    const activeEli = getEliForLevel(lvl.id, loc, this.eliDepth);
+    const eliKeys = ['eli5', 'eli10', 'eli15', 'eli20', 'eliphd'];
+    const eliDepthShortLabels = {
+      eli5: '5',
+      eli10: '10',
+      eli15: '15',
+      eli20: '20',
+      eliphd: 'PhD',
+    };
+    const eliBlockHtml = `
+      <div class="eli-section">
+        <div class="eli-header">
+          <span class="eli-title">${escapeHtml(loc === 'fa' ? 'سطح تحلیل مفهومی' : loc === 'de' ? 'Erklärungsstufe' : 'Concept Depth')}:</span>
+          <div class="eli-tabs" role="tablist">
+            ${eliKeys
+              .map(
+                (k) => `
+              <button type="button" class="eli-tab ${this.eliDepth === k ? 'active' : ''}" data-eli="${k}" title="${escapeHtml(
+                  ELI_DEPTHS[k][loc] || ELI_DEPTHS[k].en
+                )}">
+                ${escapeHtml(eliDepthShortLabels[k])}
+              </button>`
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="eli-card">
+          <div class="eli-badge-row">
+            <span class="eli-badge">${escapeHtml(activeEli.depthLabel)}</span>
+            <span class="eli-metaphor">«${escapeHtml(activeEli.metaphor)}»</span>
+          </div>
+          <p class="eli-text">${escapeHtml(activeEli.explanation)}</p>
+          <div class="eli-takeaway"><strong>${escapeHtml(
+            loc === 'fa' ? 'نکته کلیدی:' : loc === 'de' ? 'Kernaussage:' : 'Key Takeaway:'
+          )}</strong> ${escapeHtml(activeEli.takeaway)}</div>
+        </div>
+      </div>
+    `;
+
     this.dockEl.innerHTML = `
       <h2>${escapeHtml(name)}</h2>
       <p class="objective">${escapeHtml(obj)}</p>
+      ${eliBlockHtml}
       ${
         learning.length
           ? `<div class="learning-box">
@@ -564,6 +641,13 @@ class App {
       <ul class="goal-list">${items.join('')}</ul>
       ${stateNotesHtml}
     `;
+
+    this.dockEl.querySelectorAll('[data-eli]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const d = el.getAttribute('data-eli');
+        if (d) this.setEliDepth(d);
+      });
+    });
 
     this.dockEl.querySelectorAll('[data-fill]').forEach((el) => {
       el.addEventListener('click', () => {
@@ -600,6 +684,27 @@ class App {
     }
     if (lower === 'hint') {
       this.showHint();
+      return;
+    }
+    if (lower === 'eli' || lower === 'explain') {
+      this.showEliExplanation(this.eliDepth);
+      return;
+    }
+    if (/^eli(5|10|15|20|phd)$/.test(lower)) {
+      this.setEliDepth(lower);
+      this.showEliExplanation(lower);
+      return;
+    }
+    if (lower.startsWith('eli ') || lower.startsWith('explain ') || lower.startsWith('depth ')) {
+      const parts = lower.split(/\s+/);
+      const arg = (parts[1] || '').trim();
+      const targetDepth = arg.startsWith('eli') ? arg : `eli${arg}`;
+      if (['eli5', 'eli10', 'eli15', 'eli20', 'eliphd'].includes(targetDepth)) {
+        this.setEliDepth(targetDepth);
+        this.showEliExplanation(targetDepth);
+      } else {
+        this.terminal.push('meta', 'Available depths: eli5, eli10, eli15, eli20, eliphd');
+      }
       return;
     }
     if (lower === 'steps' || lower === 'goal' || lower === 'show goal') {
@@ -1028,7 +1133,7 @@ class App {
             </div>
             <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
             <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
-            <p><strong>۳۳</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
+            <p><strong>۴۴</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
           ` : loc === 'de' ? `
             <p>Interaktives <strong>Windows CMD</strong> Tutorial — Von 0 bis Experten-Level (100% Praxiswissen).</p>
             <div class="quality-card">
@@ -1049,7 +1154,7 @@ class App {
             </div>
             <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
             <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
-            <p><strong>33</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
+            <p><strong>44</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
           ` : `
             <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — from absolute zero to 100% expert mastery.</p>
             <div class="quality-card">
@@ -1070,7 +1175,7 @@ class App {
             </div>
             <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
             <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
-            <p><strong>33</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
+            <p><strong>44</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
           `}
         </div>
         <div class="modal-actions">
@@ -1164,6 +1269,50 @@ class App {
       levels: seq.levels,
     }));
 
+    const filterLabels =
+      loc === 'fa'
+        ? {
+            all: 'همه سطوح',
+            eli5: 'کودک (ELI5)',
+            eli10: 'مقدماتی (ELI10)',
+            eli15: 'دبیرستان (ELI15)',
+            eli20: 'دانشگاهی (ELI20)',
+            eliphd: 'دکتری (PhD)',
+          }
+        : loc === 'de'
+        ? {
+            all: 'Alle Stufen',
+            eli5: 'Kind (ELI5)',
+            eli10: 'Anfänger (ELI10)',
+            eli15: 'Mittelschule (ELI15)',
+            eli20: 'Universität (ELI20)',
+            eliphd: 'PhD / Forschung',
+          }
+        : {
+            all: 'All Tiers',
+            eli5: 'Kid (ELI5)',
+            eli10: 'Basics (ELI10)',
+            eli15: 'High-School (ELI15)',
+            eli20: 'University (ELI20)',
+            eliphd: 'PhD / Deep',
+          };
+
+    const filterChipsHtml = `
+      <div class="level-filter-bar" role="group" aria-label="Cognitive depth filter">
+        <span class="filter-label">${escapeHtml(
+          loc === 'fa' ? 'فیلتر بر اساس عمق مفهومی:' : loc === 'de' ? 'Filter nach Tiefe:' : 'Filter by Depth:'
+        )}</span>
+        ${Object.entries(filterLabels)
+          .map(
+            ([fKey, fText]) => `
+          <button type="button" class="filter-chip ${fKey === 'all' ? 'active' : ''}" data-filter="${fKey}">
+            ${escapeHtml(fText)}
+          </button>`
+          )
+          .join('')}
+      </div>
+    `;
+
     let tabs = '';
     let panels = '';
     groups.forEach((g, i) => {
@@ -1174,6 +1323,8 @@ class App {
           const solved = prog && prog.solved;
           const best = prog?.best != null ? prog.best : '—';
           const name = lvl.name[loc] || lvl.name.en_US;
+          const tier = getPrimaryEliTierForLevel(lvl.id);
+          const tierBadge = tier === 'eliphd' ? 'PhD' : tier.toUpperCase();
           const scoreLabel =
             loc === 'fa'
               ? `بهترین ${best} / هدف ${lvl.par || 1} کامند`
@@ -1181,8 +1332,9 @@ class App {
                 ? `Beste ${best} / Ziel ${lvl.par || 1} Befehle`
                 : `best ${best} / target ${lvl.par || 1} cmds`;
           return `
-            <li class="level-item ${solved ? 'solved' : ''}" data-level="${lvl.id}">
+            <li class="level-item ${solved ? 'solved' : ''}" data-level="${lvl.id}" data-tier="${tier}">
               <span class="level-name">${escapeHtml(name)}</span>
+              <span class="level-tier-badge ${tier}">${escapeHtml(tierBadge)}</span>
               <span class="level-golf">${escapeHtml(scoreLabel)}</span>
             </li>
           `;
@@ -1201,6 +1353,7 @@ class App {
       <div class="levels-dialog">
         <h2>${escapeHtml(u.levelsTitle)}</h2>
         <p class="levels-sub">${escapeHtml(u.pickChallenge)}</p>
+        ${filterChipsHtml}
         <div class="levels-tabs">${tabs}</div>
         ${panels}
         <div class="modal-actions">
@@ -1208,6 +1361,23 @@ class App {
         </div>
       </div>
     `);
+
+    this.modalContentEl.querySelectorAll('[data-filter]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const filterVal = chip.getAttribute('data-filter');
+        this.modalContentEl.querySelectorAll('.filter-chip').forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        this.modalContentEl.querySelectorAll('.level-item').forEach((item) => {
+          const itemTier = item.getAttribute('data-tier');
+          if (filterVal === 'all' || itemTier === filterVal) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    });
 
     this.modalContentEl.querySelectorAll('[data-tab]').forEach((tab) => {
       tab.addEventListener('click', () => {

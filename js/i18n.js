@@ -682,6 +682,29 @@ export const dialogsFa = {
     ],
   },
 
+  'pipes-stderr': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## هدایت خطای استاندارد (`2>` و `2>&1`)',
+            '',
+            'دستورات دو جریان خروجی مجزا دارند:',
+            '- **جریان ۱ (STDOUT):** خروجی عادی دستورات (`>` و `>>`)',
+            '- **جریان ۲ (STDERR):** پیام‌های خطا و هشدارها (`2>` و `2>>`)',
+            '',
+            'برای ذخیره پیام‌های خطا در فایل بدون اینکه صفحه ترمینال شلوغ شود، از `2> error.log` استفاده کنید.',
+            '',
+            '```',
+            'type missing.txt 2> error.log',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
   'adv-chain': {
     childViews: [
       {
@@ -764,6 +787,53 @@ export const dialogsFa = {
         type: 'ModalAlert',
         options: {
           markdowns: ['وقتی درخت با هدف یکی شد، قبول می‌شوی. موفق باشی.'],
+        },
+      },
+    ],
+  },
+
+  'adv-math': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## محاسبات ریاضی عددی (`SET /A`)',
+            '',
+            'به طور پیش‌فرض متغیرها متن هستند. با سوییچ `/A` می‌توانید عبارات ریاضی را محاسبه کنید:',
+            '',
+            '```',
+            'set /a NUM=10 + 5',
+            'set /a NUM+=1',
+            '```',
+            '',
+            'عبارت `40 + 2` را محاسبه کن و حاصل `42` را در فایل `math.txt` بنویس:',
+            '',
+            '```',
+            'set /a RESULT=40+2 & echo %RESULT%>math.txt',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'adv-escape': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## کاراکتر گریز و فرار از عملگرها (`^`)',
+            '',
+            'در خط فرمان ویندوز نمادهایی مثل `&`، `|` و `>` عملگر هستند. برای چاپ مستقیم آن‌ها به عنوان متن عادی، از **کلاهک (`^`)** قبل از آن‌ها استفاده می‌شود.',
+            '',
+            'عبارت `apples & oranges` را در فایل `recipe.txt` بنویس:',
+            '',
+            '```',
+            'echo apples ^& oranges>recipe.txt',
+            '```',
+          ],
         },
       },
     ],
@@ -1017,6 +1087,48 @@ export const dialogsFa = {
             '',
             '```',
             'fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'sys-net': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## عیب‌یابی شبکه و تست اتصال (`PING` و `IPCONFIG`)',
+            '',
+            'دستور `ipconfig` آدرس‌های آی‌پی را نشان می‌دهد و `ping` با ارسال بسته‌های داده، سلامت و تاخیر شبکه را می‌سنجد.',
+            '',
+            'آدرس محلی لوپ‌بک (`127.0.0.1`) را پینگ کن و نتیجه را در `ping.txt` ذخیره کن:',
+            '',
+            '```',
+            'ping 127.0.0.1 > ping.txt',
+            '```',
+          ],
+        },
+      },
+    ],
+  },
+
+  'sys-reg': {
+    childViews: [
+      {
+        type: 'ModalAlert',
+        options: {
+          markdowns: [
+            '## رجیستری ویندوز (`REG QUERY`)',
+            '',
+            'رجیستری پایگاه داده مرکزی تنظیمات ویندوز و نرم‌افزارهاست. با `reg query` می‌توان مقادیر آن را خواند.',
+            '',
+            'کلید نرم‌افزارهای مایکروسافت را کوئری بگیر و در `reg.txt` ذخیره کن:',
+            '',
+            '```',
+            'reg query HKLM\\Software\\Microsoft > reg.txt',
             '```',
           ],
         },
@@ -1948,6 +2060,23 @@ export const LEVEL_METADATA = {
       fieldNotes: ['`findstr /r` ermöglicht die Verwendung regulärer Ausdrücke.'],
     },
   },
+  'pipes-stderr': {
+    en: {
+      objective: 'Run `type missing.txt 2> error.log` to redirect standard error.',
+      learning: ['Understanding Standard Error (STDERR / File Descriptor 2)', 'Isolating error messages from standard output'],
+      fieldNotes: ['`2> file` captures errors, while `>nul 2>&1` silences both stdout and stderr completely.'],
+    },
+    fa: {
+      objective: 'دستور `type missing.txt 2> error.log` را برای هدایت خطای استاندارد اجرا کن.',
+      learning: ['آشنایی با جریان خطای استاندارد (STDERR و دیسکریپتور ۲)', 'جداسازی پیام‌های خطا از جریان خروجی استاندارد'],
+      fieldNotes: ['ترکیب `2> file` خطاها را ذخیره می‌کند و `>nul 2>&1` تمام خروجی‌ها را کاملاً بی‌صدا می‌سازد.'],
+    },
+    de: {
+      objective: 'Führe `type missing.txt 2> error.log` aus.',
+      learning: ['Standardfehlerstrom (STDERR / Deskriptor 2)', 'Fehlermeldungen in eine Datei umleiten'],
+      fieldNotes: ['`2> datei` fängt Fehler ab, während `>nul 2>&1` jegliche Ausgabe unterdrückt.'],
+    },
+  },
   'adv-chain': {
     en: {
       objective: 'Conditionally create directory and file: `md backup && echo data>backup\\copy.txt`.',
@@ -1997,6 +2126,40 @@ export const LEVEL_METADATA = {
       objective: 'Erstelle eine vollständige Projektstruktur mit verketteten Befehlen.',
       learning: ['Beherrschung mehrstufiger CMD-Automatisierung', 'Praxisnaher Aufbau von Projektstrukturen'],
       fieldNotes: ['Die Kombination von `&`, `&&` und Pfaden ermöglicht vollständige Projekterstellung.'],
+    },
+  },
+  'adv-math': {
+    en: {
+      objective: 'Run `set /a RESULT=40+2 & echo %RESULT%>math.txt` to evaluate arithmetic.',
+      learning: ['Evaluating integer arithmetic with SET /A', 'Using mathematical variables in script calculations'],
+      fieldNotes: ['`set /a` supports operators like `+`, `-`, `*`, `/`, `%` as well as compound assignments (`+=`).'],
+    },
+    fa: {
+      objective: 'دستور `set /a RESULT=40+2 & echo %RESULT%>math.txt` را برای محاسبه ریاضی اجرا کن.',
+      learning: ['انجام محاسبات عددی با سوییچ SET /A', 'استفاده از متغیرهای ریاضی در محاسبات اسکریپت'],
+      fieldNotes: ['سوییچ `set /a` از عملگرهای ریاضی `+`, `-`, `*`, `/`, `%` و انتساب مرکب (`+=`) پشتیبانی می‌کند.'],
+    },
+    de: {
+      objective: 'Führe `set /a RESULT=40+2 & echo %RESULT%>math.txt` aus.',
+      learning: ['Ganzzahlarithmetik mit SET /A berechnen', 'Mathematische Variablen in Skripten nutzen'],
+      fieldNotes: ['`set /a` unterstützt grundlegende Operatoren sowie Zuweisungen wie `+=`.'],
+    },
+  },
+  'adv-escape': {
+    en: {
+      objective: 'Run `echo apples ^& oranges>recipe.txt` using the caret escape character.',
+      learning: ['Escaping special command operators with `^`', 'Preventing premature line splitting on ampersands'],
+      fieldNotes: ['In Windows CMD, `^` escapes control characters (`&`, `|`, `>`, `<`) so they are treated as plain text.'],
+    },
+    fa: {
+      objective: 'دستور `echo apples ^& oranges>recipe.txt` را با استفاده از کاراکتر گریز کلاهک اجرا کن.',
+      learning: ['خنثی‌سازی عملگرهای خط فرمان با کاراکتر `^`', 'جلوگیری از شکسته‌شدن زودهنگام دستور در اثر علامت &'],
+      fieldNotes: ['در ویندوز کاراکتر `^` نمادهای کنترلی (`&`, `|`, `>`, `<`) را خنثی می‌کند تا به عنوان متن عادی چاپ شوند.'],
+    },
+    de: {
+      objective: 'Führe `echo apples ^& oranges>recipe.txt` mit dem Caret-Zeichen aus.',
+      learning: ['Maskieren von Steuerzeichen mit `^`', 'Verhindern ungewollter Befehlstrennung bei &'],
+      fieldNotes: ['Unter Windows CMD maskiert `^` Sonderzeichen (`&`, `|`, `>`, `<`) als normalen Text.'],
     },
   },
   'sys-datetime': {
@@ -2116,6 +2279,40 @@ export const LEVEL_METADATA = {
       objective: 'Erstelle eine Testdatei und passe Berechtigungen an: `fsutil file createnew disktest.bin 1024 && icacls report.docx /grant Users:(R)`.',
       learning: ['Verwaltung von Zugriffskontrolllisten mit ICACLS', 'Dateisystem-Diagnose und Platzreservierung mit FSUTIL'],
       fieldNotes: ['`icacls` ist unverzichtbar für die Durchsetzung von Least-Privilege-Sicherheitsrichtlinien.'],
+    },
+  },
+  'sys-net': {
+    en: {
+      objective: 'Run `ping 127.0.0.1 > ping.txt` to test loopback reachability.',
+      learning: ['Network connectivity diagnostics with PING', 'Testing TCP/IP loopback adapter (127.0.0.1)'],
+      fieldNotes: ['Pinging loopback verifies that the local TCP/IP protocol stack is active and operational.'],
+    },
+    fa: {
+      objective: 'دستور `ping 127.0.0.1 > ping.txt` را برای تست سلامت اتصال لوپ‌بک اجرا کن.',
+      learning: ['عیب‌یابی اتصالات شبکه با دستور PING', 'تست آدرس لوپ‌بک محلی (127.0.0.1) در کارت شبکه'],
+      fieldNotes: ['پینگ کردن لوپ‌بک تأیید می‌کند که پشته پروتکل TCP/IP ویندوز فعال است و به درستی کار می‌کند.'],
+    },
+    de: {
+      objective: 'Führe `ping 127.0.0.1 > ping.txt` aus, um die Loopback-Verbindung zu testen.',
+      learning: ['Netzwerk-Diagnose mit PING', 'Testen des TCP/IP-Loopback-Adapters (127.0.0.1)'],
+      fieldNotes: ['Ein Ping an 127.0.0.1 stellt sicher, dass der lokale TCP/IP-Stack fehlerfrei arbeitet.'],
+    },
+  },
+  'sys-reg': {
+    en: {
+      objective: 'Run `reg query HKLM\\Software\\Microsoft > reg.txt` to inspect registry configuration.',
+      learning: ['Querying the Windows Registry via REG QUERY', 'Inspecting system software configuration keys'],
+      fieldNotes: ['`reg query` retrieves registry keys and values without opening the graphical regedit tool.'],
+    },
+    fa: {
+      objective: 'دستور `reg query HKLM\\Software\\Microsoft > reg.txt` را برای مشاهده تنظیمات رجیستری اجرا کن.',
+      learning: ['کوئری گرفتن از رجیستری ویندوز با REG QUERY', 'بررسی کلیدهای نرم‌افزاری و پیکربندی سیستم'],
+      fieldNotes: ['دستور `reg query` بدون نیاز به محیط گرافیکی regedit، مقادیر و کلیدهای رجیستری را نمایش می‌دهد.'],
+    },
+    de: {
+      objective: 'Führe `reg query HKLM\\Software\\Microsoft > reg.txt` aus.',
+      learning: ['Abfrage der Windows-Registry mit REG QUERY', 'System-Konfigurationsschlüssel inspizieren'],
+      fieldNotes: ['`reg query` liest Registry-Werte schnell ohne die grafische regedit-Oberfläche aus.'],
     },
   },
   'batch-if': {
