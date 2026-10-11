@@ -129,6 +129,30 @@ function renderMarkdown(md) {
   return html.join('\n');
 }
 
+/**
+ * Difficulty of a level on a 1–5 scale (higher is harder), derived from its
+ * primary teaching tier so the meter reuses existing curated logic.
+ *
+ * @param {string} levelId
+ * @returns {number}
+ */
+const TIER_TO_DIFFICULTY = { eli5: 1, eli10: 2, eli15: 3, eli20: 4, eliphd: 5 };
+function difficultyForLevel(levelId) {
+  const tier = getPrimaryEliTierForLevel(levelId);
+  return TIER_TO_DIFFICULTY[tier] ?? 3;
+}
+
+/**
+ * Five equal-size dots; filled count = difficulty (1–5).
+ *
+ * @param {number} difficulty
+ * @returns {string}
+ */
+function renderDiffDots(difficulty) {
+  const n = Math.max(0, Math.min(5, difficulty));
+  return Array.from({ length: 5 }, (_, i) => `<i class="diff-dot${i < n ? ' on' : ''}"></i>`).join('');
+}
+
 // ---------------------------------------------------------------------------
 // App Controller
 // ---------------------------------------------------------------------------
@@ -1238,113 +1262,58 @@ class App {
       levels: seq.levels,
     }));
 
-    const tierName =
+    const parNote = (par) =>
       loc === 'fa'
-        ? { eli5: 'شروع', eli10: 'مقدماتی', eli15: 'متوسط', eli20: 'پیشرفته', eliphd: 'حرفه‌ای' }
+        ? `هدف ${par} کامند`
         : loc === 'de'
-          ? { eli5: 'Starter', eli10: 'Anfänger', eli15: 'Mittelstufe', eli20: 'Fortgeschritten', eliphd: 'Experte' }
-          : { eli5: 'Starter', eli10: 'Beginner', eli15: 'Intermediate', eli20: 'Advanced', eliphd: 'Expert' };
+          ? `ideal ${par} Befehle`
+          : `ideal ${par} cmd${par === 1 ? '' : 's'}`;
 
-    const filterLabels = {
-      all: loc === 'fa' ? 'همه سطوح' : loc === 'de' ? 'Alle Stufen' : 'All Levels',
-      eli5: tierName.eli5,
-      eli10: tierName.eli10,
-      eli15: tierName.eli15,
-      eli20: tierName.eli20,
-      eliphd: tierName.eliphd,
-    };
-
-    const filterChipsHtml = `
-      <div class="level-filter-bar" role="group" aria-label="Level filter">
-        <span class="filter-label">${escapeHtml(
-          loc === 'fa' ? 'فیلتر بر اساس سطح:' : loc === 'de' ? 'Filter nach Stufe:' : 'Filter by level:'
-        )}</span>
-        ${Object.entries(filterLabels)
-          .map(
-            ([fKey, fText]) => `
-          <button type="button" class="filter-chip ${fKey === 'all' ? 'active' : ''}" data-filter="${fKey}">
-            ${escapeHtml(fText)}
-          </button>`
-          )
-          .join('')}
-      </div>
-    `;
-
-    let tabs = '';
-    let panels = '';
-    groups.forEach((g, i) => {
-      tabs += `<button type="button" class="tab-btn ${i === 0 ? 'active' : ''}" data-tab="${g.key}">${escapeHtml(g.title)}</button>`;
-      const items = g.levels
-        .map((lvl) => {
-          const prog = this.progress[lvl.id];
-          const solved = prog && prog.solved;
-          const best = prog?.best != null ? prog.best : '—';
-          const name = lvl.name[loc] || lvl.name.en_US;
-          const tier = getPrimaryEliTierForLevel(lvl.id);
-          const tierBadge = tierName[tier] || tier;
-          const scoreLabel =
-            loc === 'fa'
-              ? `بهترین ${best} / هدف ${lvl.par || 1} کامند`
-              : loc === 'de'
-                ? `Beste ${best} / Ziel ${lvl.par || 1} Befehle`
-                : `best ${best} / target ${lvl.par || 1} cmds`;
-          return `
-            <li class="level-item ${solved ? 'solved' : ''}" data-level="${lvl.id}" data-tier="${tier}">
-              <span class="level-name">${escapeHtml(name)}</span>
-              <span class="level-tier-badge ${tier}">${escapeHtml(tierBadge)}</span>
-              <span class="level-golf">${escapeHtml(scoreLabel)}</span>
-            </li>
-          `;
-        })
-        .join('');
-
-      panels += `
-        <div class="tab-panel ${i === 0 ? 'active' : ''}" data-panel="${g.key}">
-          <p class="seq-about">${escapeHtml(g.about)}</p>
-          <ul class="level-list">${items}</ul>
-        </div>
-      `;
-    });
+    const body = groups
+      .map((g) => {
+        const rows = g.levels
+          .map((lvl) => {
+            const prog = this.progress[lvl.id];
+            const solved = Boolean(prog && prog.solved);
+            const best = prog?.best != null ? prog.best : '';
+            const name = lvl.name[loc] || lvl.name.en_US;
+            const diff = difficultyForLevel(lvl.id);
+            const par = lvl.par || 1;
+            const chipInner = solved
+              ? `${escapeHtml(u.solvedLabel)} ${escapeHtml(best)}`
+              : `<span class="diff-dots" aria-label="${escapeHtml(u.difficultyOf(diff))}">${renderDiffDots(diff)}</span>`;
+            return `
+              <button type="button" class="level-row ${solved ? 'solved' : ''}" data-level="${escapeHtml(lvl.id)}">
+                <span class="id">${escapeHtml(lvl.id)}</span>
+                <span class="name">${escapeHtml(name)}</span>
+                <span class="par-note">${escapeHtml(parNote(par))}</span>
+                <span class="chip ${solved ? 'ok' : ''}" title="${escapeHtml(u.difficultyOf(diff))}">${chipInner}</span>
+              </button>
+            `;
+          })
+          .join('');
+        return `<div class="series-block"><h3>${escapeHtml(g.title)}</h3><div class="level-list">${rows}</div></div>`;
+      })
+      .join('');
 
     this.openModal(`
       <div class="levels-dialog">
         <h2>${escapeHtml(u.levelsTitle)}</h2>
         <p class="levels-sub">${escapeHtml(u.pickChallenge)}</p>
-        ${filterChipsHtml}
-        <div class="levels-tabs">${tabs}</div>
-        ${panels}
+        <div class="legend-box">
+          <div class="next-title">${escapeHtml(u.howToRead)}</div>
+          <ul class="legend-list">
+            <li><span class="diff-dots" aria-hidden="true">${renderDiffDots(3)}</span> ${renderMarkdown(u.difficultyLegend)}</li>
+            <li><span class="par-note">${escapeHtml(parNote(3))}</span> ${renderMarkdown(u.idealLegend)}</li>
+            <li><span class="chip ok">${escapeHtml(u.solvedLabel)} 3</span> ${renderMarkdown(u.solvedLegend)}</li>
+          </ul>
+        </div>
+        ${body}
         <div class="modal-actions">
           <button type="button" class="btn ghost" id="btn-close-lvls">${escapeHtml(u.close)}</button>
         </div>
       </div>
     `);
-
-    this.modalContentEl.querySelectorAll('[data-filter]').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const filterVal = chip.getAttribute('data-filter');
-        this.modalContentEl.querySelectorAll('.filter-chip').forEach((c) => c.classList.remove('active'));
-        chip.classList.add('active');
-
-        this.modalContentEl.querySelectorAll('.level-item').forEach((item) => {
-          const itemTier = item.getAttribute('data-tier');
-          if (filterVal === 'all' || itemTier === filterVal) {
-            item.style.display = '';
-          } else {
-            item.style.display = 'none';
-          }
-        });
-      });
-    });
-
-    this.modalContentEl.querySelectorAll('[data-tab]').forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const key = tab.getAttribute('data-tab');
-        this.modalContentEl.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-        this.modalContentEl.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-        tab.classList.add('active');
-        this.modalContentEl.querySelector(`[data-panel="${key}"]`)?.classList.add('active');
-      });
-    });
 
     this.modalContentEl.querySelectorAll('[data-level]').forEach((item) => {
       item.addEventListener('click', () => {

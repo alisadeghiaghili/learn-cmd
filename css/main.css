@@ -1433,82 +1433,103 @@ button.ghost,
   margin-bottom: 14px;
 }
 
-.levels-tabs {
-  display: flex;
-  gap: 6px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+.legend-box {
+  border: 1px solid var(--line);
+  background: var(--ink);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
 }
 
-.tab-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--haze);
-  border-radius: 6px;
-  padding: 6px 12px;
-  min-height: 32px;
+.legend-list {
+  margin: 6px 0 0;
+  padding-inline-start: 16px;
 }
 
-.tab-btn.active {
-  background: var(--panel-2);
-  border-color: var(--line);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.tab-panel {
-  display: none;
-}
-
-.tab-panel.active {
-  display: block;
-}
-
-.seq-about {
-  color: var(--haze);
+.legend-list li {
+  margin-bottom: 6px;
   font-size: 12.5px;
-  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.legend-list li code {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.series-block {
+  margin-bottom: 16px;
+}
+
+.series-block h3 {
+  margin: 0 0 8px;
+  color: var(--haze);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .level-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
-.level-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.level-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
   gap: 10px;
-  padding: 8px 12px;
-  background: var(--ink);
+  align-items: center;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--ink);
+  text-align: start;
+  width: 100%;
+  font: inherit;
+  color: var(--text);
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease;
 }
 
-.level-item:hover {
+.level-row:hover {
   border-color: var(--cmd);
   background: color-mix(in srgb, var(--cmd) 8%, var(--ink));
 }
 
-.level-item.solved {
+.level-row.solved {
   border-color: color-mix(in srgb, var(--ok) 40%, var(--line));
 }
 
-.level-item .level-name {
-  font-weight: 500;
+.level-row .id {
+  font-family: var(--mono);
+  color: var(--haze);
+  font-size: 11px;
 }
 
-.level-item .level-golf {
-  font-family: var(--mono);
-  font-size: 11.5px;
+.level-row .name {
+  font-weight: 600;
+}
+
+.level-row .par-note {
+  margin: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  border: 1px solid var(--line);
   color: var(--haze);
+  background: var(--panel-2);
+  white-space: nowrap;
+}
+
+.chip.ok {
+  color: #b8ffd9;
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
 }
 
 /* Builder & Toast */
@@ -1797,89 +1818,4 @@ button.ghost,
 
 .eli-takeaway strong {
   color: var(--ok);
-}
-
-/* Cognitive depth filter bar in levels modal */
-.level-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-  padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.filter-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--haze);
-  margin-inline-end: 4px;
-}
-
-.filter-chip {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--text-secondary);
-  font-family: var(--ui);
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.filter-chip:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-}
-
-.filter-chip.active {
-  background: var(--cmd-soft);
-  color: var(--cmd);
-  border-color: var(--cmd-stroke);
-  font-weight: 600;
-}
-
-.level-tier-badge {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 1px 5px;
-  border-radius: 4px;
-  margin-inline-start: 6px;
-  vertical-align: middle;
-  border: 1px solid transparent;
-}
-
-.level-tier-badge.eli5 {
-  background: rgba(108, 203, 95, 0.15);
-  color: var(--ok);
-  border-color: rgba(108, 203, 95, 0.3);
-}
-
-.level-tier-badge.eli10 {
-  background: rgba(96, 205, 255, 0.15);
-  color: var(--cmd);
-  border-color: rgba(96, 205, 255, 0.3);
-}
-
-.level-tier-badge.eli15 {
-  background: rgba(252, 225, 0, 0.15);
-  color: var(--warn);
-  border-color: rgba(252, 225, 0, 0.3);
-}
-
-.level-tier-badge.eli20 {
-  background: rgba(175, 120, 255, 0.15);
-  color: #bf80ff;
-  border-color: rgba(175, 120, 255, 0.3);
-}
-
-.level-tier-badge.eliphd {
-  background: rgba(255, 153, 164, 0.15);
-  color: var(--err);
-  border-color: rgba(255, 153, 164, 0.3);
 }
