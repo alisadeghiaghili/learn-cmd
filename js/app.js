@@ -29,7 +29,7 @@ import { getVisitorCount, getCachedVisitorCount, BASE_COUNT } from './visitor-co
 import { formatUiHelpText, uiHelpModalHtml, startUiTour } from './ui-help.js';
 import { getLocale, setLocale, ui, localizeLevel, getDialogFa, LOCALES } from './i18n.js';
 import {
-  ELI_DEPTHS,
+  ELI_DEPTH_MAP,
   getEliForLevel,
   getPrimaryEliTierForLevel,
 } from './eli.js';
@@ -295,7 +295,7 @@ class App {
     }
     const loc = getLocale();
     const eli = getEliForLevel(this.level.id, loc, d);
-    const label = ELI_DEPTHS[d]?.[loc] || ELI_DEPTHS[d]?.en || d.toUpperCase();
+    const label = ELI_DEPTH_MAP[d]?.name?.[loc] || ELI_DEPTH_MAP[d]?.name?.en || d.toUpperCase();
     this.terminal.push('out', '══════════════════════════════════════════════════════');
     this.terminal.push('out', `🎓 [${label}] — ${eli.metaphor}`);
     this.terminal.push('out', '──────────────────────────────────────────────────────');
@@ -576,49 +576,9 @@ class App {
       ? `<div class="par-note">${escapeHtml(u.stateNotes || 'State notes:')} ${escapeHtml(diff.missingPaths.slice(0, 3).join(' · '))}</div>`
       : '';
 
-    const activeEli = getEliForLevel(lvl.id, loc, this.eliDepth);
-    const eliKeys = ['eli5', 'eli10', 'eli15', 'eli20', 'eliphd'];
-    const eliDepthShortLabels = {
-      eli5: '5',
-      eli10: '10',
-      eli15: '15',
-      eli20: '20',
-      eliphd: 'PhD',
-    };
-    const eliBlockHtml = `
-      <div class="eli-section">
-        <div class="eli-header">
-          <span class="eli-title">${escapeHtml(loc === 'fa' ? 'سطح تحلیل مفهومی' : loc === 'de' ? 'Erklärungsstufe' : 'Concept Depth')}:</span>
-          <div class="eli-tabs" role="tablist">
-            ${eliKeys
-              .map(
-                (k) => `
-              <button type="button" class="eli-tab ${this.eliDepth === k ? 'active' : ''}" data-eli="${k}" title="${escapeHtml(
-                  ELI_DEPTHS[k][loc] || ELI_DEPTHS[k].en
-                )}">
-                ${escapeHtml(eliDepthShortLabels[k])}
-              </button>`
-              )
-              .join('')}
-          </div>
-        </div>
-        <div class="eli-card">
-          <div class="eli-badge-row">
-            <span class="eli-badge">${escapeHtml(activeEli.depthLabel)}</span>
-            <span class="eli-metaphor">«${escapeHtml(activeEli.metaphor)}»</span>
-          </div>
-          <p class="eli-text">${escapeHtml(activeEli.explanation)}</p>
-          <div class="eli-takeaway"><strong>${escapeHtml(
-            loc === 'fa' ? 'نکته کلیدی:' : loc === 'de' ? 'Kernaussage:' : 'Key Takeaway:'
-          )}</strong> ${escapeHtml(activeEli.takeaway)}</div>
-        </div>
-      </div>
-    `;
-
     this.dockEl.innerHTML = `
       <h2>${escapeHtml(name)}</h2>
       <p class="objective">${escapeHtml(obj)}</p>
-      ${eliBlockHtml}
       ${
         learning.length
           ? `<div class="learning-box">
@@ -641,13 +601,6 @@ class App {
       <ul class="goal-list">${items.join('')}</ul>
       ${stateNotesHtml}
     `;
-
-    this.dockEl.querySelectorAll('[data-eli]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const d = el.getAttribute('data-eli');
-        if (d) this.setEliDepth(d);
-      });
-    });
 
     this.dockEl.querySelectorAll('[data-fill]').forEach((el) => {
       el.addEventListener('click', () => {
@@ -1109,79 +1062,95 @@ class App {
   openWelcomeModal() {
     const u = ui();
     const loc = getLocale();
+    const total = allLevels().length;
+
+    const w =
+      loc === 'fa'
+        ? {
+            intro: 'آموزش تعاملی **خط فرمان ویندوز (CMD)** — سندباکس + مراحل هدایت‌شده.',
+            board:
+              'بورد درخت زنده‌ی فایل‌سیستم مجازی درایو **C:** را نشان می‌دهد. هر فرمانی که اجرا کنید، آن را بلافاصله به‌روز می‌کند.',
+            tracks:
+              '- مبانی: `echo`, `dir`, `cd`\n- فایل‌ها و مسیرها: `md`, `del`, `copy`\n- پایپ‌ها و فیلترها: `findstr`, `sort`, `>`\n- موضوعات پیشرفته: `&&`, `set`, `for`\n- سیستم و صفات فایل: `attrib`, `where`, `date`\n- اسکریپت و اتوماسیون: `.bat`, `if`, `errorlevel`',
+            meta: 'متا: `levels`, `curriculum`, `help`, `hint`, `steps`, `show solution`.',
+            levelsCount: `**${total}** مرحله گنجانده شده. برای شروع مرحله‌ها را باز کنید، یا در سندباکس بمانید.`,
+            what: '**learn-cmd چیست؟**',
+            whatBody:
+              'یک آزمایشگاه مرورگری برای CMD: فرمان‌های واقعی ویندوز تایپ می‌کنید و تغییرات درایوی مجازی C: را می‌بینید. برای هسته‌ی آموزش نصب لازم نیست.',
+            publisher: '**ناشر**',
+            publisherBody:
+              'انتشار و نگهداری توسط **Ali Sadeghi Aghili** — برنامه‌نویس، سیستم‌های ویندوز و اتوماسیون. [linktr.ee/aliaghili](https://linktr.ee/aliaghili)',
+            github: '- [GitHub — سورس و ایشو](https://github.com/alisadeghiaghili/learn-cmd)',
+            coffee: 'Buy Me a Coffee (از ناشر حمایت می‌کند):',
+          }
+        : loc === 'de'
+          ? {
+              intro: 'Interaktives **Windows-CMD**-Tutorial — Sandbox + geführte Levels.',
+              board:
+                'Das Board zeigt die Live-Baumstruktur des virtuellen Laufwerks **C:**. Jeder Befehl aktualisiert sie sofort.',
+              tracks:
+                '- Basics: `echo`, `dir`, `cd`\n- Dateien & Pfade: `md`, `del`, `copy`\n- Pipes & Filter: `findstr`, `sort`, `>`\n- Fortgeschritten: `&&`, `set`, `for`\n- System & Attribute: `attrib`, `where`, `date`\n- Skripting & Automation: `.bat`, `if`, `errorlevel`',
+              meta: 'Meta: `levels`, `curriculum`, `help`, `hint`, `steps`, `show solution`.',
+              levelsCount: `**${total}** Levels enthalten. Öffne Levels zum Starten oder bleib in der Sandbox.`,
+              what: '**Was ist learn-cmd?**',
+              whatBody:
+                'Eine Browser-Laborbank für CMD: du tippst echte Windows-Befehle und siehst, wie sich das virtuelle Laufwerk C: ändert. Kein Install für den Tutorial-Kern nötig.',
+              publisher: '**Publisher**',
+              publisherBody:
+                'Veröffentlicht und gepflegt von **Ali Sadeghi Aghili** — Programmer, Windows Systems & Automation. [linktr.ee/aliaghili](https://linktr.ee/aliaghili)',
+              github: '- [GitHub — Quelle & Issues](https://github.com/alisadeghiaghili/learn-cmd)',
+              coffee: 'Buy Me a Coffee (unterstützt den Publisher):',
+            }
+          : {
+              intro: 'Interactive **Windows Command Line (CMD)** tutorial — sandbox + guided levels.',
+              board:
+                'The board shows the live virtual **C:** filesystem tree. Every command you run updates it instantly.',
+              tracks:
+                '- Basics: `echo`, `dir`, `cd`\n- Files & Paths: `md`, `del`, `copy`\n- Pipes & Filters: `findstr`, `sort`, `>`\n- Advanced: `&&`, `set`, `for`\n- System & Attributes: `attrib`, `where`, `date`\n- Scripting & Automation: `.bat`, `if`, `errorlevel`',
+              meta: 'Meta: `levels`, `curriculum`, `help`, `hint`, `steps`, `show solution`.',
+              levelsCount: `**${total}** levels included. Open Levels to begin, or stay in sandbox.`,
+              what: '**What is learn-cmd?**',
+              whatBody:
+                'A browser lab bench for CMD: you type real Windows commands and watch the virtual C: drive change. No install required for the tutorial core.',
+              publisher: '**Publisher**',
+              publisherBody:
+                'Published and maintained by **Ali Sadeghi Aghili** — programmer, Windows systems & automation. [linktr.ee/aliaghili](https://linktr.ee/aliaghili)',
+              github: '- [GitHub — source & issues](https://github.com/alisadeghiaghili/learn-cmd)',
+              coffee: 'Buy Me a Coffee (supports the publisher):',
+            };
+
+    const bodyHtml = renderMarkdown(
+      [
+        w.intro,
+        '',
+        w.board,
+        '',
+        w.tracks,
+        '',
+        w.meta,
+        '',
+        w.levelsCount,
+        '',
+        w.what,
+        w.whatBody,
+        '',
+        w.publisher,
+        w.publisherBody,
+        '',
+        w.github,
+        '',
+        w.coffee,
+        '',
+        COFFEE_BUTTON_HTML,
+      ].join('\n')
+    );
+
     this.openModal(`
-      <div class="levels-dialog welcome-dialog">
-        <h2><img src="assets/favicon.svg" alt="CMD" class="welcome-brand-icon" />welcome to learn <span class="brand-cmd">CMD</span></h2>
-        <div class="markdown">
-          ${loc === 'fa' ? `
-            <p>آموزش تعاملی <strong>خط فرمان ویندوز (CMD)</strong> — از نقطه صفر تا تسلط تخصصی بالای ۹۰٪ به همراه مراحل هدف‌محور پروداکشن.</p>
-            <div class="quality-card">
-              <div class="quality-badges">
-                <span class="q-badge">🎯 <strong>سرفصل‌های جامع</strong> برترین دوره‌های دنیا</span>
-                <span class="q-badge">⚡ <strong>عمق و کاربرد:</strong> بالای ۹۰ / ۱۰۰</span>
-                <span class="q-badge">🎓 <strong>کیفیت آموزش:</strong> حداقل ۸.۵ / ۱۰</span>
-              </div>
-              <p class="quality-desc">این دوره از صفر مطلق شروع شده و تا سطح کامل پروداکشن و اتوماسیون پیش می‌رود؛ بدون نیاز به پیش‌زمینه قبلی تا تسلط بر صفات فایل، پردازش‌ها و اسکریپت‌های شرطی.</p>
-            </div>
-            <div class="learning-box">
-              <div class="next-title">چرا یادگیری CMD اهمیت دارد و به چه درد می‌خورد؟</div>
-              <ul>
-                <li><strong>سرعت و اتوماسیون:</strong> انجام کارهای تکراری و مدیریت انبوه فایل‌ها در چند ثانیه به‌جای کار خسته‌کننده با ماوس.</li>
-                <li><strong>سرورها، داکر و DevOps:</strong> کنترل سیستم‌های بدون رابط گرافیکی (Headless)، کانتینرها و پایپ‌لاین‌های CI/CD.</li>
-                <li><strong>عیب‌یابی پیشرفته و نجات سیستم:</strong> دسترسی مستقیم به شبکه، پروسه‌ها و سیستم‌عامل زمانی که رابط گرافیکی کرش می‌کند.</li>
-              </ul>
-            </div>
-            <p>در پنل سمت چپ، ساختار فایل‌سیستم مجازی درایو <code>C:</code> را به صورت زنده مشاهده می‌کنید. هر فرمانی که اجرا کنید، نقشه را بلافاصله تغییر می‌دهد.</p>
-            <p>دستورات کاربردی ترمینال: <code>levels</code> برای انتخاب مرحله، <code>hint</code> برای دریافت راهنمایی و <code>steps</code> برای بررسی اهداف.</p>
-            <p><strong>۴۴</strong> مرحله در ۶ فصل تخصصی آماده است. برای شروع یکی از مراحل را انتخاب کنید، یا در محیط آزاد تمرین کنید.</p>
-          ` : loc === 'de' ? `
-            <p>Interaktives <strong>Windows CMD</strong> Tutorial — Von 0 bis Experten-Level (100% Praxiswissen).</p>
-            <div class="quality-card">
-              <div class="quality-badges">
-                <span class="q-badge">🎯 <strong>Lehrplan</strong> erstklassiger Kurse</span>
-                <span class="q-badge">⚡ <strong>Tiefe & Nutzen:</strong> 95 - 100 / 100</span>
-                <span class="q-badge">🎓 <strong>Didaktik:</strong> mind. 9.0 / 10</span>
-              </div>
-              <p class="quality-desc">Vollkommen praxisnah vom absoluten Nullpunkt bis zur echten Produktions-Automatisierung mit Schleifen, Exit-Codes, Batch-Skripten und Prozesssteuerung.</p>
-            </div>
-            <div class="learning-box">
-              <div class="next-title">Warum CMD wichtig ist und wozu man es braucht:</div>
-              <ul>
-                <li><strong>Geschwindigkeit & Automatisierung:</strong> Massenoperationen sekundenschnell ohne Maus erledigen.</li>
-                <li><strong>Server, Docker & DevOps:</strong> Unerlässlich für Headless-Server, Container und CI/CD-Pipelines.</li>
-                <li><strong>Systemdiagnose & Wiederherstellung:</strong> Direkter Zugriff auf Prozesse und Netzwerk bei GUI-Ausfällen.</li>
-              </ul>
-            </div>
-            <p>Auf der linken Seite siehst du die Live-Baumstruktur des virtuellen Laufwerks <code>C:</code>. Jeder Befehl aktualisiert das Dateisystem sofort.</p>
-            <p>Terminal-Befehle: <code>levels</code> zur Level-Auswahl, <code>hint</code> für Tipps und <code>steps</code> für die Kriterien.</p>
-            <p><strong>44</strong> Level in 6 Kapiteln enthalten. Öffne die Level-Übersicht oder starte in der Sandbox.</p>
-          ` : `
-            <p>Interactive <strong>Windows Command Line (CMD)</strong> tutorial — from absolute zero to 100% expert mastery.</p>
-            <div class="quality-card">
-              <div class="quality-badges">
-                <span class="q-badge">🎯 <strong>Top Curriculum:</strong> Curated from best courses</span>
-                <span class="q-badge">⚡ <strong>Depth & Practicality:</strong> 95 - 100 / 100</span>
-                <span class="q-badge">🎓 <strong>Instruction Quality:</strong> ≥ 9.0 / 10</span>
-              </div>
-              <p class="quality-desc">Designed to be completely hands-on, zero-fluff, taking beginners with zero knowledge all the way to production scripting, FOR loops, ERRORLEVEL handling, and .bat build automation.</p>
-            </div>
-            <div class="learning-box">
-              <div class="next-title">Why CMD is important and where it is used:</div>
-              <ul>
-                <li><strong>Speed & Automation:</strong> Execute bulk file tasks and workflows in seconds rather than repetitive clicking.</li>
-                <li><strong>Servers, Docker & CI/CD:</strong> The foundation for headless cloud servers, containers, and automated pipelines.</li>
-                <li><strong>Deep System Diagnostics:</strong> Low-level network, process, and repair access when graphical Windows crashes.</li>
-              </ul>
-            </div>
-            <p>The board on the left displays the live virtual <code>C:</code> filesystem tree. Every command updates the map immediately.</p>
-            <p>Helpful terminal commands: <code>levels</code> to pick a challenge, <code>hint</code> for guidance, and <code>steps</code> for checklist criteria.</p>
-            <p><strong>44</strong> levels in 6 specialized sequences. Open Levels to begin, or stay in sandbox.</p>
-          `}
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn primary" id="btn-welcome-levels">${escapeHtml(u.levels)}</button>
-          <button type="button" class="btn ghost" id="btn-welcome-sandbox">${escapeHtml(u.sandboxBtn)}</button>
-        </div>
+      <h2>Welcome to Learn <span class="brand-cmd">CMD</span></h2>
+      <div class="markdown">${bodyHtml}</div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="btn-welcome-sandbox">${escapeHtml(u.sandboxBtn)}</button>
+        <button type="button" class="btn primary" id="btn-welcome-levels">${escapeHtml(u.levels)}</button>
       </div>
     `);
 
@@ -1269,38 +1238,26 @@ class App {
       levels: seq.levels,
     }));
 
-    const filterLabels =
+    const tierName =
       loc === 'fa'
-        ? {
-            all: 'همه سطوح',
-            eli5: 'کودک (ELI5)',
-            eli10: 'مقدماتی (ELI10)',
-            eli15: 'دبیرستان (ELI15)',
-            eli20: 'دانشگاهی (ELI20)',
-            eliphd: 'دکتری (PhD)',
-          }
+        ? { eli5: 'شروع', eli10: 'مقدماتی', eli15: 'متوسط', eli20: 'پیشرفته', eliphd: 'حرفه‌ای' }
         : loc === 'de'
-        ? {
-            all: 'Alle Stufen',
-            eli5: 'Kind (ELI5)',
-            eli10: 'Anfänger (ELI10)',
-            eli15: 'Mittelschule (ELI15)',
-            eli20: 'Universität (ELI20)',
-            eliphd: 'PhD / Forschung',
-          }
-        : {
-            all: 'All Tiers',
-            eli5: 'Kid (ELI5)',
-            eli10: 'Basics (ELI10)',
-            eli15: 'High-School (ELI15)',
-            eli20: 'University (ELI20)',
-            eliphd: 'PhD / Deep',
-          };
+          ? { eli5: 'Starter', eli10: 'Anfänger', eli15: 'Mittelstufe', eli20: 'Fortgeschritten', eliphd: 'Experte' }
+          : { eli5: 'Starter', eli10: 'Beginner', eli15: 'Intermediate', eli20: 'Advanced', eliphd: 'Expert' };
+
+    const filterLabels = {
+      all: loc === 'fa' ? 'همه سطوح' : loc === 'de' ? 'Alle Stufen' : 'All Levels',
+      eli5: tierName.eli5,
+      eli10: tierName.eli10,
+      eli15: tierName.eli15,
+      eli20: tierName.eli20,
+      eliphd: tierName.eliphd,
+    };
 
     const filterChipsHtml = `
-      <div class="level-filter-bar" role="group" aria-label="Cognitive depth filter">
+      <div class="level-filter-bar" role="group" aria-label="Level filter">
         <span class="filter-label">${escapeHtml(
-          loc === 'fa' ? 'فیلتر بر اساس عمق مفهومی:' : loc === 'de' ? 'Filter nach Tiefe:' : 'Filter by Depth:'
+          loc === 'fa' ? 'فیلتر بر اساس سطح:' : loc === 'de' ? 'Filter nach Stufe:' : 'Filter by level:'
         )}</span>
         ${Object.entries(filterLabels)
           .map(
@@ -1324,7 +1281,7 @@ class App {
           const best = prog?.best != null ? prog.best : '—';
           const name = lvl.name[loc] || lvl.name.en_US;
           const tier = getPrimaryEliTierForLevel(lvl.id);
-          const tierBadge = tier === 'eliphd' ? 'PhD' : tier.toUpperCase();
+          const tierBadge = tierName[tier] || tier;
           const scoreLabel =
             loc === 'fa'
               ? `بهترین ${best} / هدف ${lvl.par || 1} کامند`
