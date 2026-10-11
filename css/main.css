@@ -13,12 +13,12 @@
   --cmd: #60cdff;
   --cmd-soft: rgba(96, 205, 255, 0.16);
   --cmd-stroke: rgba(96, 205, 255, 0.35);
-  --cache: #6ccb5f;
-  --remote: #fce100;
-  --code: #60cdff;
-  --ok: #6ccb5f;
-  --warn: #fce100;
-  --err: #ff99a4;
+  --cache: #2dd4bf;
+  --remote: #f59e0b;
+  --code: #60a5fa;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
   --ui: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --mono: 'Cascadia Code', Consolas, ui-monospace, monospace;
   color-scheme: dark;
