@@ -107,9 +107,7 @@ body {
 .brand span,
 .brand-cmd,
 .cmd-logo,
-.welcome-dialog h2 span,
-.lesson-card h2 span,
-.lesson-card h3 span {
+.welcome-dialog h2 span {
   color: var(--cmd);
   font-weight: 700;
 }
@@ -1006,6 +1004,29 @@ button.ghost,
   gap: 8px;
   justify-content: flex-end;
   margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.demo-run {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  padding: 10px;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.demo-run code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--code);
+}
+
+.demo-after {
+  margin-top: 12px;
 }
 
 /* Celebration modal & confetti */

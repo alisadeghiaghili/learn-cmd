@@ -1194,62 +1194,81 @@ class App {
     }
 
     const loc = getLocale();
+    const u = ui();
+    const level = this.level;
     const dialog =
       (loc === 'fa' && getDialogFa(this.level.id)) ||
       (this.level.startDialog && (this.level.startDialog[loc] || this.level.startDialog.en_US)) ||
       getDialogFa(this.level.id);
 
-    if (!dialog || !dialog.childViews || !dialog.childViews.length) return;
+    const childViews = (dialog && dialog.childViews) || [];
+    if (!childViews.length) return;
 
-    let html = `<div class="lesson-dialog">`;
-    dialog.childViews.forEach((view, idx) => {
+    const fallbackTitle = () =>
+      escapeHtml(level.name[loc] || level.name.en_US) || ui().levelMeta(level.id, '');
+
+    let idx = 0;
+    const renderSlide = () => {
+      const view = childViews[idx];
+      const last = idx === childViews.length - 1;
+      let title = fallbackTitle();
+      let body = '';
+
       if (view.type === 'ModalAlert') {
-        const md = (view.options.markdowns || []).join('\n');
-        html += `<section class="lesson-card">${renderMarkdown(md)}</section>`;
+        body = renderMarkdown((view.options.markdowns || []).join('\n'));
       } else if (view.type === 'CmdDemonstrationView') {
+        const cmd = view.options.command || '';
         const before = (view.options.beforeMarkdowns || []).join('\n');
         const after = (view.options.afterMarkdowns || []).join('\n');
-        html += `<section class="lesson-card demo-card">
+        title = escapeHtml(cmd);
+        body = `
           ${renderMarkdown(before)}
           <div class="demo-run">
-            <code>${escapeHtml(view.options.command || '')}</code>
-            <button class="btn primary" data-demo="${idx}" data-cmd="${escapeHtml(view.options.command || '')}">Run</button>
+            <code>${escapeHtml(cmd)}</code>
+            <button type="button" class="btn primary" data-demo="${idx}" data-cmd="${escapeHtml(cmd)}">${escapeHtml(u.run)}</button>
           </div>
-          <div id="demo-after-${idx}" hidden>${renderMarkdown(after)}</div>
-        </section>`;
+          <div class="demo-after" hidden>${renderMarkdown(after)}</div>`;
       }
-    });
 
-    html += `
-      <div class="modal-actions">
-        <button type="button" class="btn primary" id="btn-start-lvl">${escapeHtml(ui().startLevel)}</button>
-        <button type="button" class="btn" id="btn-show-sol">${escapeHtml(ui().solution)}</button>
-        <button type="button" class="btn ghost" id="btn-close-dlg">${escapeHtml(ui().close)}</button>
-      </div>
-    </div>`;
+      let actions = '';
+      if (idx > 0) {
+        actions += `<button type="button" class="btn ghost" data-lesson="back">${escapeHtml(u.back)}</button>`;
+      }
+      if (!last) {
+        actions += `<button type="button" class="btn primary" data-lesson="next">${escapeHtml(u.next)}</button>`;
+      } else {
+        actions += `<button type="button" class="btn primary" data-lesson="start">${escapeHtml(u.startLevel)}</button>`;
+      }
 
-    this.openModal(html);
+      this.openModal(`<h2>${title}</h2><div class="markdown">${body}</div><div class="modal-actions">${actions}</div>`);
 
-    this.modalContentEl.querySelectorAll('[data-demo]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const cmd = btn.getAttribute('data-cmd');
-        const idx = btn.getAttribute('data-demo');
+      this.modalContentEl.querySelector('[data-lesson="back"]')?.addEventListener('click', () => {
+        idx -= 1;
+        renderSlide();
+      });
+      this.modalContentEl.querySelector('[data-lesson="next"]')?.addEventListener('click', () => {
+        idx += 1;
+        renderSlide();
+      });
+      this.modalContentEl.querySelector('[data-lesson="start"]')?.addEventListener('click', () => {
+        this.closeModal();
+      });
+
+      const demo = this.modalContentEl.querySelector('[data-demo]');
+      demo?.addEventListener('click', () => {
+        const cmd = demo.getAttribute('data-cmd');
         if (cmd) {
           const clone = this.fs.clone();
           const res = executeLine(cmd, { fs: clone });
           res.lines.forEach((l) => this.terminal.push('out', l));
         }
-        const afterEl = document.getElementById(`demo-after-${idx}`);
-        if (afterEl) {
-          afterEl.hidden = false;
-          btn.disabled = true;
-        }
+        const afterEl = this.modalContentEl.querySelector('.demo-after');
+        if (afterEl) afterEl.hidden = false;
+        demo.disabled = true;
       });
-    });
+    };
 
-    document.getElementById('btn-start-lvl')?.addEventListener('click', () => this.closeModal());
-    document.getElementById('btn-show-sol')?.addEventListener('click', () => this.showSolution());
-    document.getElementById('btn-close-dlg')?.addEventListener('click', () => this.closeModal());
+    renderSlide();
   }
 
   openLevelsDialog() {
