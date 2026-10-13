@@ -318,37 +318,6 @@ test('levelFromJson rejects incomplete payloads', async () => {
   assert.throws(() => levelFromJson(/** @type {any} */ ({ name: { en_US: 'x' } })), /startFS/);
 });
 
-test('parseVisitorBadgeSvg extracts count and handles scale suffixes and Persian/Arabic numerals', async () => {
-  const { parseVisitorBadgeSvg, normalizeDigits, BASE_COUNT } = await import('../js/visitor-counter.js');
-  assert.equal(BASE_COUNT, 44);
-  assert.equal(normalizeDigits('۱۲۳۴۵۶۷۸۹۰'), '1234567890');
-  assert.equal(normalizeDigits('١٢٣٤٥٦٧٨٩٠'), '1234567890');
-  assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: 1,420</title></svg>'), 1420);
-  assert.equal(parseVisitorBadgeSvg('<svg><title>visitors: 2.5k</title></svg>'), 2500);
-  assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: 1M</title></svg>'), 1000000);
-  assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: ۱۲ / ۱۷</title></svg>'), 12);
-  assert.equal(parseVisitorBadgeSvg('<svg><title>VISITORS: ١٥ / ٢٠</title></svg>'), 15);
-  assert.equal(parseVisitorBadgeSvg('<svg aria-label="VISITORS: ۷ / ۱۰"></svg>'), 7);
-  assert.equal(parseVisitorBadgeSvg('invalid svg content'), null);
-  assert.equal(parseVisitorBadgeSvg(''), null);
-});
-
-test('getVisitorCount respects local deduplication without re-fetching on repeat visits', async () => {
-  const { getVisitorCount, STORAGE_KEY } = await import('../js/visitor-counter.js');
-  const store = { [STORAGE_KEY]: JSON.stringify({ count: 70, at: Date.now() }) };
-  const origLocal = global.localStorage;
-  global.localStorage = {
-    getItem: (k) => store[k] || null,
-    setItem: (k, v) => { store[k] = v; },
-  };
-  try {
-    const count = await getVisitorCount();
-    assert.equal(count, 70);
-  } finally {
-    global.localStorage = origLocal;
-  }
-});
-
 test('buildShareTargets formats share messages and social links', async () => {
   const { buildShareTargets } = await import('../js/share.js');
   const dummyCurriculum = {

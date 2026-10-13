@@ -25,7 +25,7 @@ Nothing touches your real disk. The whole machine is an in-memory tree, so `del 
 - **Terminal quiz** — interactive `quiz` command testing CMD grammar and switches
 - **Curriculum outcomes** — `curriculum` command summarizing mastered concepts
 - **Multi-language** — complete UI and lesson dialog localization for English, Persian (فارسی), and German (Deutsch)
-- **Visitor telemetry** — live deduplicated visitor counter in the toolbar
+- **Visitor telemetry** — live unique visitor counter in the toolbar (counted once per browser, shared with the landing page)
 - **Real-ish CMD** — `dir`, `cd`, `md`, `rd`, `del`, `copy`, `move`, `ren`, `type`, `more`, `tree`, `find`, `findstr`, `sort`, `fc`, `attrib`, `set`, `path`, `where`, redirection (`>` `>>` `<`), pipes (`|`), chaining (`&` `&&` `||`)
 
 ## Run
@@ -61,7 +61,7 @@ js/confetti.js          canvas particle confetti burst and procedural audio fanf
 js/progress.js          dual cookie/localStorage persistence and curriculum stats
 js/share.js             social share target generators (LinkedIn, X, Facebook)
 js/ui-help.js           UI region guide and live element highlighter
-js/visitor-counter.js   visitor telemetry client with SVG parsing and caching
+js/visitor-counter.js   unique visitor counter client (server-side count, once per browser)
 js/app.js               application controller wiring state, UI, and events
 tests/cmd.test.js       node:test unit test suite
 scripts/serve.js        local preview server

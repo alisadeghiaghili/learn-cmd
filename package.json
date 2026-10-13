@@ -6,7 +6,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node --test tests/cmd.test.js",
+    "test": "node --test tests/cmd.test.js tests/visitor-counter.test.js",
     "start": "node scripts/serve.js"
   },
   "engines": {
